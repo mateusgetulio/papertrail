@@ -75,6 +75,16 @@ type IdeaDetail struct {
 	ConsultingRisk int
 	TrustWeight    float64
 
+	// Per-axis LLM sub-scores stored as columns (1..10), used by the report
+	// generator's executive-summary heuristics.
+	HighTicketPotential  int
+	MassMarketPotential  int
+	TechnicalFeasibility int
+	MarketUrgency        int
+	CompetitionRisk      int
+	DataAvailability     int
+	MVPComplexity        int
+
 	Evidence   []Evidence
 	Reviewer   string
 	Notes      string
@@ -217,6 +227,9 @@ SELECT i.id, i.idea_name, COALESCE(i.one_sentence_pitch,''),
        COALESCE(i.disruption_driver,''), COALESCE(i.target_customer,''), COALESCE(i.buyer_persona,''),
        i.countries_or_regions, COALESCE(i.why_it_might_work,''), COALESCE(i.why_it_might_fail,''),
        COALESCE(i.possible_mvp,''), COALESCE(i.first_10_customers,''), i.validation_questions,
+       COALESCE(i.high_ticket_potential,0), COALESCE(i.mass_market_potential,0),
+       COALESCE(i.technical_feasibility,0), COALESCE(i.market_urgency,0),
+       COALESCE(i.competition_risk,0), COALESCE(i.data_availability,0), COALESCE(i.mvp_complexity,0),
        i.created_at,
        COALESCE(rs.overall_score,0), rs.components,
        COALESCE(rv.state::text,'pending'), COALESCE(rv.reviewer,''), COALESCE(rv.notes,''), rv.merged_into
@@ -233,6 +246,9 @@ WHERE i.id = $1`
 		&d.DisruptionDriver, &d.TargetCustomer, &d.BuyerPersona,
 		&d.Countries, &d.WhyWork, &d.WhyFail,
 		&d.PossibleMVP, &d.First10, &d.ValidationQuestions,
+		&d.HighTicketPotential, &d.MassMarketPotential,
+		&d.TechnicalFeasibility, &d.MarketUrgency,
+		&d.CompetitionRisk, &d.DataAvailability, &d.MVPComplexity,
 		&d.CreatedAt,
 		&d.OverallScore, &compRaw,
 		&d.ReviewState, &d.Reviewer, &d.Notes, &d.MergedInto,

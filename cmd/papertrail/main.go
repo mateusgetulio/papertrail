@@ -21,6 +21,7 @@ import (
 	"github.com/mateusgetulio/papertrail/internal/fetch"
 	"github.com/mateusgetulio/papertrail/internal/ingest"
 	"github.com/mateusgetulio/papertrail/internal/llm"
+	pipelinepkg "github.com/mateusgetulio/papertrail/internal/pipeline"
 	"github.com/mateusgetulio/papertrail/internal/scoring"
 	"github.com/mateusgetulio/papertrail/internal/search"
 	bravepkg "github.com/mateusgetulio/papertrail/internal/search/brave"
@@ -46,8 +47,13 @@ func main() {
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
 	serveAddr := serveCmd.String("addr", ":8080", "Address to listen on")
 
+	pipelineCmd := flag.NewFlagSet("pipeline", flag.ExitOnError)
+	pipelineLimit := pipelineCmd.Int("limit", 10, "Per-stage cap (documents / candidates)")
+	pipelineIngest := pipelineCmd.Bool("ingest", false, "Run live discovery + ingest in Agent 1 (uses Brave + OpenAI)")
+	pipelineAnalyse := pipelineCmd.Bool("analyse", false, "Run LLM analysis in Agent 2 over freshly-extracted docs (uses OpenAI)")
+
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: papertrail <spike|discover|ingest|analyse|serve> [flags]")
+		fmt.Println("Usage: papertrail <spike|discover|ingest|analyse|serve|pipeline> [flags]")
 		os.Exit(1)
 	}
 
@@ -84,6 +90,12 @@ func main() {
 		_ = serveCmd.Parse(os.Args[2:])
 		if err := runServe(*serveAddr); err != nil {
 			slog.Error("serve failed", "err", err)
+			os.Exit(1)
+		}
+	case "pipeline":
+		_ = pipelineCmd.Parse(os.Args[2:])
+		if err := runPipeline(*pipelineIngest, *pipelineAnalyse, *pipelineLimit); err != nil {
+			slog.Error("pipeline failed", "err", err)
 			os.Exit(1)
 		}
 	default:
@@ -356,4 +368,44 @@ func runServe(addr string) error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	return httpSrv.ListenAndServe()
+}
+
+func runPipeline(ingestLive, analyseLive bool, limit int) error {
+	ctx := context.Background()
+
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("config: %w", err)
+	}
+
+	db, err := store.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("db: %w", err)
+	}
+	defer db.Close()
+
+	res, err := pipelinepkg.Run(ctx, db, cfg, slog.Default(), pipelinepkg.Options{
+		Ingest:  ingestLive,
+		Analyse: analyseLive,
+		Limit:   limit,
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nRun %s — decision: %s\n", res.RunID, res.Gate.Decision)
+	fmt.Printf("  documents prepared: %d\n", len(res.Operator.DocumentsPrepared))
+	fmt.Printf("  ranked candidates:  %d\n", len(res.Analyst.RankedCandidates))
+	if res.Report.ReportMarkdownLocation != "" {
+		fmt.Printf("  report:             %s\n", res.Report.ReportMarkdownLocation)
+	}
+	fmt.Printf("  blockers: %d · warnings: %d · backlog: %d\n",
+		len(res.Gate.Blockers), len(res.Gate.Warnings), len(res.Gate.NiceToHaveBacklog))
+	if res.Stopped {
+		fmt.Println("  ⚠️  chain stopped early for a blocker — see blockers above.")
+		for _, b := range res.Gate.Blockers {
+			fmt.Printf("    - [%s] %s → %s\n", b.SourceAgent, b.Issue, b.RecommendedFix)
+		}
+	}
+	return nil
 }

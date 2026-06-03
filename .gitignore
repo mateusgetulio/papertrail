@@ -1,13 +1,36 @@
+# Secrets / env (keep the example template tracked)
 .env
-*.env.local
+.env.*
+!.env.example
+
 # built binary at repo root (anchored so it does not match cmd/papertrail/)
 /papertrail
 dist/
+build/
 tmp/
+temp/
+
+# Pipeline artifacts & local data — never commit ingested content or reports
+generated_reports/
+raw_documents/
+downloaded_documents/
+vector_store/
+.vectors/
+.chroma/
+.cache/
+.cache-docs/
+logs/
+*.log
+*.sqlite
+*.sqlite3
+*.db
 *.pdf
+*.docx
+*.xlsx
 
 # Agent / editor / OS cruft
 .devin/
 .DS_Store
 .idea/
 .vscode/
+coverage/

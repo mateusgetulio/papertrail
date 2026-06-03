@@ -11,6 +11,7 @@ type Config struct {
 	OpenAIModel string
 	BraveAPIKey string
 	LogLevel    string
+	ReportsDir  string
 }
 
 func Load() (*Config, error) {
@@ -20,6 +21,7 @@ func Load() (*Config, error) {
 		OpenAIModel: env("OPENAI_MODEL", "gpt-4o-mini"),
 		BraveAPIKey: os.Getenv("BRAVE_API_KEY"),
 		LogLevel:    env("LOG_LEVEL", "info"),
+		ReportsDir:  env("REPORTS_DIR", "generated_reports"),
 	}
 	if c.OpenAIKey == "" {
 		return nil, fmt.Errorf("OPENAI_API_KEY is required")
