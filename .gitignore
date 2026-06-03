@@ -1,0 +1,12 @@
+.env
+*.env.local
+papertrail
+dist/
+tmp/
+*.pdf
+
+# Agent / editor / OS cruft
+.devin/
+.DS_Store
+.idea/
+.vscode/
