@@ -1,0 +1,23 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paper Trail — Review</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <nav class="bg-white border-b">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+      <a href="/" class="font-semibold text-lg">📄 Paper Trail</a>
+      <span class="text-gray-300">/</span>
+      <a href="/" class="text-sm text-gray-600 hover:text-gray-900">Review queue</a>
+      <a href="/export/csv" class="ml-auto text-sm rounded bg-gray-900 text-white px-3 py-1.5 hover:bg-gray-700">Export approved CSV</a>
+    </div>
+  </nav>
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    {{template "body" .}}
+  </main>
+</body>
+</html>{{end}}

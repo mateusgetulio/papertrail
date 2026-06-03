@@ -1,0 +1,69 @@
+{{define "body"}}
+{{with .Idea}}
+<div class="mb-4"><a href="/" class="text-sm text-blue-700 hover:underline">← Back to queue</a></div>
+
+<div class="flex items-start gap-4 mb-6">
+  <div class="text-3xl font-bold bg-white border rounded-lg px-4 py-2">{{.OverallScore}}</div>
+  <div>
+    <h1 class="text-2xl font-semibold">{{.IdeaName}}</h1>
+    <p class="text-gray-600">{{.Pitch}}</p>
+    <div class="flex gap-2 mt-2">
+      <span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span>
+      {{if .SalesMotion}}<span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{.SalesMotion}}</span>{{end}}
+      <span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <section class="bg-white border rounded p-4 space-y-3">
+      {{if .PainPoint}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Pain point</h3><p>{{.PainPoint}}</p></div>{{end}}
+      {{if .DisruptionDriver}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Disruption driver</h3><p>{{.DisruptionDriver}}</p></div>{{end}}
+      {{if .TargetCustomer}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Target customer</h3><p>{{.TargetCustomer}} {{if .BuyerPersona}}· {{.BuyerPersona}}{{end}}</p></div>{{end}}
+      {{if .WhyWork}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Why it might work</h3><p>{{.WhyWork}}</p></div>{{end}}
+      {{if .WhyFail}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Why it might fail</h3><p>{{.WhyFail}}</p></div>{{end}}
+      {{if .PossibleMVP}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Possible MVP</h3><p>{{.PossibleMVP}}</p></div>{{end}}
+      {{if .First10}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">First 10 customers</h3><p>{{.First10}}</p></div>{{end}}
+      {{if .Industries}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Industries</h3><p>{{join .Industries}}</p></div>{{end}}
+      {{if .Countries}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Countries / regions</h3><p>{{join .Countries}}</p></div>{{end}}
+      {{if .ValidationQuestions}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Validation questions</h3><ul class="list-disc pl-5">{{range .ValidationQuestions}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+    </section>
+
+    <section class="bg-white border rounded p-4">
+      <h3 class="font-semibold mb-3">Evidence &amp; citations</h3>
+      {{range .Evidence}}
+      <div class="border-l-2 border-gray-200 pl-3 mb-3">
+        <p class="text-sm italic text-gray-700">“{{.Excerpt}}”</p>
+        {{if .SourceURL}}<a href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-700 hover:underline break-all">{{.SourceURL}}</a>{{end}}
+      </div>
+      {{else}}<p class="text-sm text-gray-400">No evidence recorded.</p>{{end}}
+    </section>
+  </div>
+
+  <div class="space-y-6">
+    <section class="bg-white border rounded p-4">
+      <h3 class="font-semibold mb-3">Score breakdown</h3>
+      <div class="space-y-2">
+        {{range $.Breakdown}}
+        <div>
+          <div class="flex justify-between text-xs">
+            <span>{{.Label}}{{if .Inverted}} <span class="text-amber-600" title="risk: higher is worse">↓</span>{{end}}</span>
+            <span class="text-gray-500">{{.Raw}}/10 · {{pct .Weight}}</span>
+          </div>
+          <div class="h-1.5 bg-gray-100 rounded"><div class="h-1.5 bg-blue-500 rounded" style="width: {{barWidth .Adj}}"></div></div>
+        </div>
+        {{end}}
+      </div>
+      <div class="mt-3 pt-3 border-t text-xs text-gray-600 space-y-1">
+        <div class="flex justify-between"><span>Generic risk (penalty)</span><span>{{.GenericRisk}}/10</span></div>
+        <div class="flex justify-between"><span>Consulting risk (penalty)</span><span>{{.ConsultingRisk}}/10</span></div>
+        <div class="flex justify-between"><span>Trust weight</span><span>{{.TrustWeight}}</span></div>
+      </div>
+    </section>
+
+    {{template "reviewpanel" $}}
+  </div>
+</div>
+{{end}}
+{{end}}

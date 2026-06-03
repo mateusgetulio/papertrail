@@ -1,6 +1,7 @@
 .env
 *.env.local
-papertrail
+# built binary at repo root (anchored so it does not match cmd/papertrail/)
+/papertrail
 dist/
 tmp/
 *.pdf

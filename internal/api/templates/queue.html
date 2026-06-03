@@ -1,0 +1,63 @@
+{{define "body"}}
+<h1 class="text-xl font-semibold mb-4">Review queue</h1>
+
+<form method="get" action="/" class="flex flex-wrap items-end gap-3 mb-5 bg-white p-4 rounded border">
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Label</label>
+    <select name="label" class="border rounded px-2 py-1 text-sm">
+      <option value="">Any</option>
+      {{range .Labels}}<option value="{{.}}" {{if eq . $.Filter.Label}}selected{{end}}>{{labelize .}}</option>{{end}}
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Review state</label>
+    <select name="state" class="border rounded px-2 py-1 text-sm">
+      <option value="">Any</option>
+      {{range .States}}<option value="{{.}}" {{if eq . $.Filter.State}}selected{{end}}>{{labelize .}}</option>{{end}}
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Min score</label>
+    <input type="number" name="min" min="0" max="100" value="{{if .Filter.MinScore}}{{.Filter.MinScore}}{{end}}" class="border rounded px-2 py-1 text-sm w-24">
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Max score</label>
+    <input type="number" name="max" min="0" max="100" value="{{if .Filter.MaxScore}}{{.Filter.MaxScore}}{{end}}" class="border rounded px-2 py-1 text-sm w-24">
+  </div>
+  <button class="rounded bg-gray-900 text-white px-3 py-1.5 text-sm hover:bg-gray-700">Filter</button>
+  <a href="/" class="text-sm text-gray-500 hover:text-gray-800 py-1.5">Reset</a>
+</form>
+
+<div class="bg-white rounded border overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100 text-gray-600 text-left">
+      <tr>
+        <th class="px-4 py-2 w-16">Score</th>
+        <th class="px-4 py-2">Idea</th>
+        <th class="px-4 py-2">Label</th>
+        <th class="px-4 py-2">Industries</th>
+        <th class="px-4 py-2">State</th>
+        <th class="px-4 py-2">Created</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {{range .Ideas}}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-2 font-semibold">{{.OverallScore}}</td>
+        <td class="px-4 py-2">
+          <a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline font-medium">{{.IdeaName}}</a>
+          <div class="text-gray-500 text-xs">{{.Pitch}}</div>
+        </td>
+        <td class="px-4 py-2"><span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span></td>
+        <td class="px-4 py-2 text-gray-600 text-xs">{{join .Industries}}</td>
+        <td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span></td>
+        <td class="px-4 py-2 text-gray-500 text-xs">{{.CreatedAt.Format "2006-01-02"}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No ideas match these filters.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+<p class="text-xs text-gray-400 mt-3">{{len .Ideas}} idea(s)</p>
+{{end}}

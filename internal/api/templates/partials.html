@@ -1,0 +1,35 @@
+{{define "reviewpanel"}}
+<section id="review-panel" class="bg-white border rounded p-4">
+  <h3 class="font-semibold mb-3">Review</h3>
+  <div class="mb-3 text-sm">
+    Current:
+    <span class="text-xs rounded px-2 py-0.5 {{stateColor .Idea.ReviewState}}">{{labelize .Idea.ReviewState}}</span>
+    {{if .Idea.MergedInto}}<span class="text-xs text-gray-500">→ merged into #{{.Idea.MergedInto}}</span>{{end}}
+  </div>
+  {{if .Idea.Reviewer}}<p class="text-xs text-gray-500 mb-1">Reviewer: {{.Idea.Reviewer}}</p>{{end}}
+  {{if .Idea.Notes}}<p class="text-xs text-gray-500 mb-3">Notes: {{.Idea.Notes}}</p>{{end}}
+
+  <form hx-post="/ideas/{{.Idea.ID}}/review" hx-target="#review-panel" hx-swap="outerHTML" class="space-y-2">
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Decision</label>
+      <select name="state" class="border rounded px-2 py-1 text-sm w-full"
+              onchange="this.form.querySelector('[data-merge]').classList.toggle('hidden', this.value !== 'merged')">
+        {{range .States}}<option value="{{.}}" {{if eq . $.Idea.ReviewState}}selected{{end}}>{{labelize .}}</option>{{end}}
+      </select>
+    </div>
+    <div data-merge class="{{if ne .Idea.ReviewState "merged"}}hidden{{end}}">
+      <label class="block text-xs text-gray-500 mb-1">Merge into idea id</label>
+      <input type="number" name="merged_into" value="{{if .Idea.MergedInto}}{{.Idea.MergedInto}}{{end}}" class="border rounded px-2 py-1 text-sm w-full">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Reviewer</label>
+      <input type="text" name="reviewer" value="{{.Idea.Reviewer}}" class="border rounded px-2 py-1 text-sm w-full">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Notes</label>
+      <textarea name="notes" rows="2" class="border rounded px-2 py-1 text-sm w-full">{{.Idea.Notes}}</textarea>
+    </div>
+    <button class="rounded bg-gray-900 text-white px-3 py-1.5 text-sm hover:bg-gray-700 w-full">Save decision</button>
+  </form>
+</section>
+{{end}}

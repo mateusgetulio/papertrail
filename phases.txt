@@ -2,5 +2,5 @@ Phase	Keys needed	Status
 1 — Discovery	Brave Search API	✅ in .env
 2 — Ingestion	None (HTTP + pdftotext)	✅
 3 — Analysis	OpenAI API	✅ in .env
-4 — Dashboard/export	None for CSV; optional for Notion/Airtable	Optional
+4 — Dashboard/export	None for CSV; optional for Notion/Airtable	✅ review dashboard (papertrail serve) + CSV export
 5 — Hardening	Optional (Exa, Tavily, SerpAPI)
