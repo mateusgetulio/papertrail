@@ -1,0 +1,47 @@
+{{define "body"}}
+<div class="mb-4"><a href="/" class="text-sm text-blue-700 hover:underline">← Back to queue</a></div>
+<h1 class="text-xl font-semibold mb-4">Compare ideas</h1>
+
+{{if not .Ideas}}
+<p class="text-gray-500">Select one or more ideas in the <a href="/" class="text-blue-700 hover:underline">review queue</a> (checkboxes) and click <em>Compare selected</em>.</p>
+{{else}}
+<div class="bg-white border rounded overflow-x-auto">
+  <table class="text-sm w-full">
+    <thead>
+      <tr class="bg-gray-100 text-left">
+        <th class="px-4 py-2 sticky left-0 bg-gray-100 w-48">Criterion</th>
+        {{range .Ideas}}<th class="px-4 py-2 align-bottom min-w-[12rem]"><a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline">{{.IdeaName}}</a></th>{{end}}
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      <tr class="font-semibold bg-gray-50">
+        <td class="px-4 py-2 sticky left-0 bg-gray-50">Overall score</td>
+        {{range .Ideas}}<td class="px-4 py-2 text-lg">{{.OverallScore}}</td>{{end}}
+      </tr>
+      <tr>
+        <td class="px-4 py-2 text-gray-500 sticky left-0 bg-white">Label</td>
+        {{range .Ideas}}<td class="px-4 py-2"><span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span></td>{{end}}
+      </tr>
+      <tr>
+        <td class="px-4 py-2 text-gray-500 sticky left-0 bg-white">Sales motion</td>
+        {{range .Ideas}}<td class="px-4 py-2 text-gray-600">{{.SalesMotion}}</td>{{end}}
+      </tr>
+      <tr>
+        <td class="px-4 py-2 text-gray-500 sticky left-0 bg-white">Review</td>
+        {{range .Ideas}}<td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span></td>{{end}}
+      </tr>
+      <tr>
+        <td class="px-4 py-2 text-gray-500 sticky left-0 bg-white align-top">Pain point</td>
+        {{range .Ideas}}<td class="px-4 py-2 text-xs text-gray-600 align-top">{{.PainPoint}}</td>{{end}}
+      </tr>
+      {{range .Rows}}
+      <tr>
+        <td class="px-4 py-2 text-gray-500 sticky left-0 bg-white">{{.Label}}</td>
+        {{range .Values}}<td class="px-4 py-2 text-gray-700">{{.}}/10</td>{{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+{{end}}

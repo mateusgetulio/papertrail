@@ -1,0 +1,59 @@
+{{define "body"}}
+<div class="mb-4"><a href="/ideas/{{.Idea.ID}}" class="text-sm text-blue-700 hover:underline">← Back to idea</a></div>
+<h1 class="text-xl font-semibold mb-4">Edit idea #{{.Idea.ID}}</h1>
+
+<form method="post" action="/ideas/{{.Idea.ID}}/edit" class="bg-white border rounded p-4 space-y-4 max-w-3xl">
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Idea name</label>
+    <input name="idea_name" value="{{.Idea.IdeaName}}" required class="border rounded px-2 py-1.5 text-sm w-full">
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">One-sentence pitch</label>
+    <textarea name="pitch" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.Pitch}}</textarea>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Pain point</label>
+    <textarea name="pain_point" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.PainPoint}}</textarea>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Target customer</label>
+      <input name="target_customer" value="{{.Idea.TargetCustomer}}" class="border rounded px-2 py-1.5 text-sm w-full">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Buyer persona</label>
+      <input name="buyer_persona" value="{{.Idea.BuyerPersona}}" class="border rounded px-2 py-1.5 text-sm w-full">
+    </div>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Why it might work</label>
+    <textarea name="why_work" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.WhyWork}}</textarea>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Why it might fail</label>
+    <textarea name="why_fail" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.WhyFail}}</textarea>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">Possible MVP</label>
+    <textarea name="possible_mvp" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.PossibleMVP}}</textarea>
+  </div>
+  <div>
+    <label class="block text-xs text-gray-500 mb-1">First 10 customers</label>
+    <textarea name="first_10" rows="2" class="border rounded px-2 py-1.5 text-sm w-full">{{.Idea.First10}}</textarea>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Industries (comma-separated)</label>
+      <input name="industries" value="{{.IndustriesCSV}}" class="border rounded px-2 py-1.5 text-sm w-full">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Countries / regions (comma-separated)</label>
+      <input name="countries" value="{{.CountriesCSV}}" class="border rounded px-2 py-1.5 text-sm w-full">
+    </div>
+  </div>
+  <div class="flex items-center gap-3 pt-2">
+    <button class="rounded bg-gray-900 text-white px-4 py-1.5 text-sm hover:bg-gray-700">Save changes</button>
+    <a href="/ideas/{{.Idea.ID}}" class="text-sm text-gray-500 hover:text-gray-800">Cancel</a>
+  </div>
+</form>
+{{end}}

@@ -19,10 +19,13 @@ var templatesFS embed.FS
 
 // Server holds dependencies for the dashboard HTTP handlers.
 type Server struct {
-	db          *pgxpool.Pool
-	queueTmpl   *template.Template
-	detailTmpl  *template.Template
-	partialTmpl *template.Template
+	db           *pgxpool.Pool
+	queueTmpl    *template.Template
+	detailTmpl   *template.Template
+	partialTmpl  *template.Template
+	insightsTmpl *template.Template
+	compareTmpl  *template.Template
+	editTmpl     *template.Template
 }
 
 // NewServer parses the embedded templates and returns a ready Server.
@@ -30,27 +33,42 @@ func NewServer(db *pgxpool.Pool) (*Server, error) {
 	parse := func(files ...string) (*template.Template, error) {
 		return template.New("").Funcs(funcMap).ParseFS(templatesFS, files...)
 	}
-	queue, err := parse("templates/layout.html", "templates/partials.html", "templates/queue.html")
-	if err != nil {
+	page := func(name string) (*template.Template, error) {
+		return parse("templates/layout.html", "templates/partials.html", "templates/"+name+".html")
+	}
+	srv := &Server{db: db}
+	var err error
+	if srv.queueTmpl, err = page("queue"); err != nil {
 		return nil, err
 	}
-	detail, err := parse("templates/layout.html", "templates/partials.html", "templates/detail.html")
-	if err != nil {
+	if srv.detailTmpl, err = page("detail"); err != nil {
 		return nil, err
 	}
-	partial, err := parse("templates/partials.html")
-	if err != nil {
+	if srv.insightsTmpl, err = page("insights"); err != nil {
 		return nil, err
 	}
-	return &Server{db: db, queueTmpl: queue, detailTmpl: detail, partialTmpl: partial}, nil
+	if srv.compareTmpl, err = page("compare"); err != nil {
+		return nil, err
+	}
+	if srv.editTmpl, err = page("edit"); err != nil {
+		return nil, err
+	}
+	if srv.partialTmpl, err = parse("templates/partials.html"); err != nil {
+		return nil, err
+	}
+	return srv, nil
 }
 
 // Routes returns the HTTP handler for the dashboard.
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleQueue)
+	mux.HandleFunc("GET /insights", s.handleInsights)
+	mux.HandleFunc("GET /compare", s.handleCompare)
 	mux.HandleFunc("GET /ideas/{id}", s.handleDetail)
 	mux.HandleFunc("POST /ideas/{id}/review", s.handleReview)
+	mux.HandleFunc("GET /ideas/{id}/edit", s.handleEditForm)
+	mux.HandleFunc("POST /ideas/{id}/edit", s.handleEditSave)
 	mux.HandleFunc("GET /export/csv", s.handleExportCSV)
 	return logRequests(mux)
 }
@@ -79,6 +97,13 @@ var funcMap = template.FuncMap{
 	},
 	// pct formats a 0..1 weight as a percentage label.
 	"pct": func(w float64) string { return formatPct(w * 100) },
+	// ratioPct formats a/b as a percentage label (for bar widths).
+	"ratioPct": func(a, b int) string {
+		if b <= 0 {
+			return "0%"
+		}
+		return formatPct(float64(a) / float64(b) * 100)
+	},
 	// labelize turns enum_values like "needs_more_evidence" into "Needs more evidence".
 	"labelize": labelize,
 	// stateColor returns Tailwind classes for a review state badge.
@@ -97,4 +122,11 @@ var funcMap = template.FuncMap{
 		}
 	},
 	"reviewStates": func() []string { return reviewStateOptions },
+	// derefI64 dereferences a *int64 (nil -> 0) so templates can compare it.
+	"derefI64": func(p *int64) int64 {
+		if p == nil {
+			return 0
+		}
+		return *p
+	},
 }

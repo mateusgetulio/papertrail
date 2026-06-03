@@ -79,6 +79,30 @@ type IdeaDetail struct {
 	Reviewer   string
 	Notes      string
 	MergedInto *int64
+
+	MergedIntoName string    // name of the idea this one was merged into (if any)
+	MergedFrom     []IdeaRef // ideas that were merged into this one
+}
+
+// IdeaRef is a minimal (id, name) reference used for merge targets and links.
+type IdeaRef struct {
+	ID       int64
+	IdeaName string
+}
+
+// IdeaEdit holds the editable narrative fields of an idea.
+type IdeaEdit struct {
+	IdeaName       string
+	Pitch          string
+	PainPoint      string
+	TargetCustomer string
+	BuyerPersona   string
+	WhyWork        string
+	WhyFail        string
+	PossibleMVP    string
+	First10        string
+	Industries     []string
+	Countries      []string
 }
 
 // buildWhere assembles the shared WHERE clause and its positional args for the
@@ -252,7 +276,69 @@ FROM evidence WHERE idea_id = $1 ORDER BY id`, id)
 	if err := ev.Err(); err != nil {
 		return nil, err
 	}
+
+	// Merge relationships: the target this idea was merged into, and any ideas
+	// that were merged into this one.
+	if d.MergedInto != nil {
+		_ = db.QueryRow(ctx, `SELECT idea_name FROM saas_idea_candidate WHERE id = $1`, *d.MergedInto).Scan(&d.MergedIntoName)
+	}
+	mf, err := db.Query(ctx, `
+SELECT i.id, i.idea_name
+FROM review_status rv
+JOIN saas_idea_candidate i ON i.id = rv.idea_id
+WHERE rv.merged_into = $1
+ORDER BY i.idea_name`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer mf.Close()
+	for mf.Next() {
+		var ref IdeaRef
+		if err := mf.Scan(&ref.ID, &ref.IdeaName); err != nil {
+			return nil, err
+		}
+		d.MergedFrom = append(d.MergedFrom, ref)
+	}
+	if err := mf.Err(); err != nil {
+		return nil, err
+	}
 	return &d, nil
+}
+
+// ListIdeaRefs returns minimal (id, name) refs for all ideas except exclude
+// (pass 0 to include all), ordered by name — used for the merge-target picker.
+func ListIdeaRefs(ctx context.Context, db *pgxpool.Pool, exclude int64) ([]IdeaRef, error) {
+	rows, err := db.Query(ctx, `
+SELECT id, idea_name FROM saas_idea_candidate
+WHERE id <> $1 ORDER BY idea_name`, exclude)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []IdeaRef
+	for rows.Next() {
+		var ref IdeaRef
+		if err := rows.Scan(&ref.ID, &ref.IdeaName); err != nil {
+			return nil, err
+		}
+		out = append(out, ref)
+	}
+	return out, rows.Err()
+}
+
+// UpdateIdeaFields persists edits to an idea's narrative fields.
+func UpdateIdeaFields(ctx context.Context, db *pgxpool.Pool, id int64, e IdeaEdit) error {
+	_, err := db.Exec(ctx, `
+UPDATE saas_idea_candidate SET
+  idea_name = $2, one_sentence_pitch = $3, pain_point = $4,
+  target_customer = $5, buyer_persona = $6,
+  why_it_might_work = $7, why_it_might_fail = $8,
+  possible_mvp = $9, first_10_customers = $10,
+  industries = $11, countries_or_regions = $12
+WHERE id = $1`,
+		id, e.IdeaName, e.Pitch, e.PainPoint, e.TargetCustomer, e.BuyerPersona,
+		e.WhyWork, e.WhyFail, e.PossibleMVP, e.First10, e.Industries, e.Countries)
+	return err
 }
 
 // UpdateReviewStatus upserts the review decision for an idea. mergedInto may be

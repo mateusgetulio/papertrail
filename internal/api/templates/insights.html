@@ -1,0 +1,44 @@
+{{define "body"}}
+<h1 class="text-xl font-semibold mb-4">Insights</h1>
+{{with .Insights}}
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white border rounded p-4"><div class="text-3xl font-bold">{{.Total}}</div><div class="text-sm text-gray-500">candidate ideas</div></div>
+  <div class="bg-white border rounded p-4"><div class="text-3xl font-bold">{{.AvgScore}}</div><div class="text-sm text-gray-500">average score</div></div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <section class="bg-white border rounded p-4">
+    <h3 class="font-semibold mb-3">Score distribution</h3>
+    {{range .ScoreBuckets}}
+    <div class="flex items-center gap-2 mb-1.5 text-xs">
+      <span class="w-14 text-gray-500">{{.Label}}</span>
+      <div class="flex-1 bg-gray-100 rounded h-4"><div class="bg-blue-500 h-4 rounded" style="width: {{ratioPct .Count $.MaxBucket}}"></div></div>
+      <span class="w-6 text-right text-gray-600">{{.Count}}</span>
+    </div>
+    {{end}}
+  </section>
+
+  <section class="bg-white border rounded p-4">
+    <h3 class="font-semibold mb-3">Label distribution</h3>
+    {{range .Labels}}
+    <div class="flex items-center gap-2 mb-1.5 text-xs">
+      <span class="w-40 truncate text-gray-600" title="{{labelize .Name}}">{{labelize .Name}}</span>
+      <div class="flex-1 bg-gray-100 rounded h-4"><div class="bg-emerald-500 h-4 rounded" style="width: {{ratioPct .N $.Insights.Total}}"></div></div>
+      <span class="w-6 text-right text-gray-600">{{.N}}</span>
+    </div>
+    {{else}}<p class="text-sm text-gray-400">No data.</p>{{end}}
+  </section>
+
+  <section class="bg-white border rounded p-4 lg:col-span-2">
+    <h3 class="font-semibold mb-3">Top industries</h3>
+    {{range .TopIndustries}}
+    <div class="flex items-center gap-2 mb-1.5 text-xs">
+      <span class="w-48 truncate text-gray-600" title="{{.Name}}">{{.Name}}</span>
+      <div class="flex-1 bg-gray-100 rounded h-4"><div class="bg-indigo-500 h-4 rounded" style="width: {{ratioPct .N $.Insights.Total}}"></div></div>
+      <span class="w-6 text-right text-gray-600">{{.N}}</span>
+    </div>
+    {{else}}<p class="text-sm text-gray-400">No industries recorded yet.</p>{{end}}
+  </section>
+</div>
+{{end}}
+{{end}}

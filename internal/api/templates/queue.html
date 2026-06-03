@@ -41,41 +41,48 @@
   </div>
 </form>
 
-<div class="bg-white rounded border overflow-hidden">
-  <table class="w-full text-sm">
-    <thead class="bg-gray-100 text-gray-600 text-left">
-      <tr>
-        <th class="px-4 py-2 w-16">Score</th>
-        <th class="px-4 py-2">Idea</th>
-        <th class="px-4 py-2">Label</th>
-        <th class="px-4 py-2">Industries</th>
-        <th class="px-4 py-2">Sales motion</th>
-        <th class="px-4 py-2 text-center" title="Number of evidence citations">Sources</th>
-        <th class="px-4 py-2">State</th>
-        <th class="px-4 py-2">Created</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y">
-      {{range .Ideas}}
-      <tr class="hover:bg-gray-50">
-        <td class="px-4 py-2 font-semibold">{{.OverallScore}}</td>
-        <td class="px-4 py-2">
-          <a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline font-medium">{{.IdeaName}}</a>
-          <div class="text-gray-500 text-xs">{{.Pitch}}</div>
-        </td>
-        <td class="px-4 py-2"><span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span></td>
-        <td class="px-4 py-2 text-gray-600 text-xs">{{join .Industries}}</td>
-        <td class="px-4 py-2 text-gray-600 text-xs">{{.SalesMotion}}</td>
-        <td class="px-4 py-2 text-center text-gray-600">{{.EvidenceCount}}</td>
-        <td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span></td>
-        <td class="px-4 py-2 text-gray-500 text-xs">{{.CreatedAt.Format "2006-01-02"}}</td>
-      </tr>
-      {{else}}
-      <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">No ideas match these filters.</td></tr>
-      {{end}}
-    </tbody>
-  </table>
-</div>
+<form method="get" action="/compare">
+  <div class="flex justify-end mb-2">
+    <button class="text-sm rounded border px-3 py-1 hover:bg-gray-100">Compare selected →</button>
+  </div>
+  <div class="bg-white rounded border overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-100 text-gray-600 text-left">
+        <tr>
+          <th class="px-3 py-2 w-8"></th>
+          <th class="px-4 py-2 w-16">Score</th>
+          <th class="px-4 py-2">Idea</th>
+          <th class="px-4 py-2">Label</th>
+          <th class="px-4 py-2">Industries</th>
+          <th class="px-4 py-2">Sales motion</th>
+          <th class="px-4 py-2 text-center" title="Number of evidence citations">Sources</th>
+          <th class="px-4 py-2">State</th>
+          <th class="px-4 py-2">Created</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {{range .Ideas}}
+        <tr class="hover:bg-gray-50">
+          <td class="px-3 py-2"><input type="checkbox" name="ids" value="{{.ID}}"></td>
+          <td class="px-4 py-2 font-semibold">{{.OverallScore}}</td>
+          <td class="px-4 py-2">
+            <a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline font-medium">{{.IdeaName}}</a>
+            <div class="text-gray-500 text-xs">{{.Pitch}}</div>
+          </td>
+          <td class="px-4 py-2"><span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span></td>
+          <td class="px-4 py-2 text-gray-600 text-xs">{{join .Industries}}</td>
+          <td class="px-4 py-2 text-gray-600 text-xs">{{.SalesMotion}}</td>
+          <td class="px-4 py-2 text-center text-gray-600">{{.EvidenceCount}}</td>
+          <td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span></td>
+          <td class="px-4 py-2 text-gray-500 text-xs">{{.CreatedAt.Format "2006-01-02"}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">No ideas match these filters.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</form>
 
 <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
   <span>{{.Total}} idea(s) · page {{.Page}} of {{.TotalPages}}</span>

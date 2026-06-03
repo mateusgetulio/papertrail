@@ -1,6 +1,9 @@
 {{define "body"}}
 {{with .Idea}}
-<div class="mb-4"><a href="/" class="text-sm text-blue-700 hover:underline">← Back to queue</a></div>
+<div class="mb-4 flex items-center justify-between">
+  <a href="/" class="text-sm text-blue-700 hover:underline">← Back to queue</a>
+  <a href="/ideas/{{.ID}}/edit" class="text-sm rounded border px-3 py-1 hover:bg-gray-100">✎ Edit idea</a>
+</div>
 
 <div class="flex items-start gap-4 mb-6">
   <div class="text-3xl font-bold bg-white border rounded-lg px-4 py-2">{{.OverallScore}}</div>

@@ -9,8 +9,14 @@
   <div class="mb-3 text-sm">
     Current:
     <span class="text-xs rounded px-2 py-0.5 {{stateColor .Idea.ReviewState}}">{{labelize .Idea.ReviewState}}</span>
-    {{if .Idea.MergedInto}}<span class="text-xs text-gray-500">→ merged into #{{.Idea.MergedInto}}</span>{{end}}
+    {{if .Idea.MergedInto}}<a href="/ideas/{{.Idea.MergedInto}}" class="text-xs text-blue-700 hover:underline">→ merged into #{{.Idea.MergedInto}} {{.Idea.MergedIntoName}}</a>{{end}}
   </div>
+  {{if .Idea.MergedFrom}}
+  <div class="mb-3 text-xs text-gray-600">
+    Merged in:
+    {{range .Idea.MergedFrom}}<a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline">#{{.ID}} {{.IdeaName}}</a>{{end}}
+  </div>
+  {{end}}
   {{if .Idea.Reviewer}}<p class="text-xs text-gray-500 mb-1">Reviewer: {{.Idea.Reviewer}}</p>{{end}}
   {{if .Idea.Notes}}<p class="text-xs text-gray-500 mb-3">Notes: {{.Idea.Notes}}</p>{{end}}
 
@@ -23,8 +29,11 @@
       </select>
     </div>
     <div data-merge class="{{if ne .Idea.ReviewState "merged"}}hidden{{end}}">
-      <label class="block text-xs text-gray-500 mb-1">Merge into idea id</label>
-      <input type="number" name="merged_into" value="{{if .Idea.MergedInto}}{{.Idea.MergedInto}}{{end}}" class="border rounded px-2 py-1 text-sm w-full">
+      <label class="block text-xs text-gray-500 mb-1">Merge into</label>
+      <select name="merged_into" class="border rounded px-2 py-1 text-sm w-full">
+        <option value="">— select an idea —</option>
+        {{range .MergeTargets}}<option value="{{.ID}}" {{if eq .ID (derefI64 $.Idea.MergedInto)}}selected{{end}}>#{{.ID}} · {{.IdeaName}}</option>{{end}}
+      </select>
     </div>
     <div>
       <label class="block text-xs text-gray-500 mb-1">Reviewer</label>

@@ -29,6 +29,9 @@ var criterionLabels = [14]string{
 	"High-ticket potential", "Time-to-MVP", "Founder / build fit",
 }
 
+// Labels returns the 14 criterion labels in rubric order.
+func Labels() []string { return criterionLabels[:] }
+
 // Breakdown maps the stored raw criteria scores to labeled, weighted rows in
 // rubric order. Extra or missing entries are tolerated (it ranges over the
 // shorter of len(criteria) and 14).
