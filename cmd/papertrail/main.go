@@ -49,7 +49,8 @@ func main() {
 
 	pipelineCmd := flag.NewFlagSet("pipeline", flag.ExitOnError)
 	pipelineLimit := pipelineCmd.Int("limit", 10, "Per-stage cap (documents / candidates)")
-	pipelineIngest := pipelineCmd.Bool("ingest", false, "Run live discovery + ingest in Agent 1 (uses Brave + OpenAI)")
+	pipelineIngest := pipelineCmd.Bool("ingest", false, "Run live search discovery + ingest in Agent 1 (uses Brave + OpenAI)")
+	pipelineSeed := pipelineCmd.Bool("seed", false, "Ingest the manually-approved curated source list in Agent 1 (uses OpenAI)")
 	pipelineAnalyse := pipelineCmd.Bool("analyse", false, "Run LLM analysis in Agent 2 over freshly-extracted docs (uses OpenAI)")
 
 	if len(os.Args) < 2 {
@@ -94,7 +95,7 @@ func main() {
 		}
 	case "pipeline":
 		_ = pipelineCmd.Parse(os.Args[2:])
-		if err := runPipeline(*pipelineIngest, *pipelineAnalyse, *pipelineLimit); err != nil {
+		if err := runPipeline(*pipelineIngest, *pipelineSeed, *pipelineAnalyse, *pipelineLimit); err != nil {
 			slog.Error("pipeline failed", "err", err)
 			os.Exit(1)
 		}
@@ -370,7 +371,7 @@ func runServe(addr string) error {
 	return httpSrv.ListenAndServe()
 }
 
-func runPipeline(ingestLive, analyseLive bool, limit int) error {
+func runPipeline(ingestLive, seedLive, analyseLive bool, limit int) error {
 	ctx := context.Background()
 
 	cfg, err := config.Load()
@@ -386,6 +387,7 @@ func runPipeline(ingestLive, analyseLive bool, limit int) error {
 
 	res, err := pipelinepkg.Run(ctx, db, cfg, slog.Default(), pipelinepkg.Options{
 		Ingest:  ingestLive,
+		Seed:    seedLive,
 		Analyse: analyseLive,
 		Limit:   limit,
 	})

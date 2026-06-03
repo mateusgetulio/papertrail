@@ -3,9 +3,12 @@ package agents
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/mateusgetulio/papertrail/internal/compliance"
+	"github.com/mateusgetulio/papertrail/internal/config"
 	"github.com/mateusgetulio/papertrail/internal/discovery"
 	"github.com/mateusgetulio/papertrail/internal/fetch"
 	"github.com/mateusgetulio/papertrail/internal/ingest"
@@ -21,24 +24,31 @@ import (
 // fetching goes through internal/compliance.
 type OperatorAgent struct {
 	ctx    *Context
-	ingest bool // when true, run live discovery + ingest before inventorying
+	ingest bool // when true, run live search discovery + ingest before inventorying
+	seed   bool // when true, ingest the manually-approved curated source list
 	limit  int
 }
 
-func NewOperator(ctx *Context, ingest bool, limit int) *OperatorAgent {
-	return &OperatorAgent{ctx: ctx, ingest: ingest, limit: limit}
+func NewOperator(ctx *Context, ingest, seed bool, limit int) *OperatorAgent {
+	return &OperatorAgent{ctx: ctx, ingest: ingest, seed: seed, limit: limit}
 }
 
 func (a *OperatorAgent) Run(c context.Context) DocumentOperatorOutput {
 	out := DocumentOperatorOutput{Agent: "document_operator", RunID: a.ctx.RunID}
 	var issues Issues
 
+	if a.seed {
+		n, rejected := a.ingestCurated(c, &issues)
+		out.RejectedSources = append(out.RejectedSources, rejected...)
+		a.ctx.Log.Info("operator seed ingest complete", "run_id", a.ctx.RunID, "ingested", n)
+	}
+
 	if a.ingest {
 		if a.ctx.Cfg.BraveAPIKey == "" {
 			issues.Add("document_operator", IssueMissingEnv, "BRAVE_API_KEY not set; cannot run discovery", "set BRAVE_API_KEY in .env")
 		} else {
 			n, rejected := a.discoverAndIngest(c, &issues)
-			out.RejectedSources = rejected
+			out.RejectedSources = append(out.RejectedSources, rejected...)
 			a.ctx.Log.Info("operator ingest complete", "run_id", a.ctx.RunID, "ingested", n)
 		}
 	}
@@ -130,6 +140,11 @@ func (a *OperatorAgent) discoverAndIngest(c context.Context, issues *Issues) (in
 			}()
 			break
 		}
+		// Skip URLs we already ingested — avoids re-fetching and re-analysing
+		// (InsertDocument upserts state, which would otherwise re-trigger analysis).
+		if exists, _ := store.DocumentExistsByURLHash(c, a.ctx.DB, cand.URLHash); exists {
+			continue
+		}
 		stored, err := pipeline.Run(c, cand)
 		if err != nil {
 			rejected = append(rejected, RejectedSrc{URL: cand.CanonicalURL, Reason: err.Error()})
@@ -141,6 +156,80 @@ func (a *OperatorAgent) discoverAndIngest(c context.Context, issues *Issues) (in
 		}
 	}
 	return ingested, rejected
+}
+
+// ingestCurated fetches the manually-approved seed sources. Each URL is run
+// through the compliance gate first (curated sources bypass discovery, so the
+// gate check that the runner normally performs must be done here) and skipped if
+// already ingested.
+func (a *OperatorAgent) ingestCurated(c context.Context, issues *Issues) (int, []RejectedSrc) {
+	cfg := a.ctx.Cfg
+	llmClient := llm.NewOpenAI(cfg.OpenAIKey, cfg.OpenAIModel)
+	robots := compliance.NewRobotsCache()
+	rates := compliance.NewRateLimiterRegistry()
+	policies := compliance.NewPolicyRegistry()
+	gate := compliance.NewGate(robots, rates, policies)
+	fetcher := fetch.New(fetch.NewMemCache())
+	pipeline := ingest.New(fetcher, gate, policies, llmClient, a.ctx.DB)
+
+	var rejected []RejectedSrc
+	ingested := 0
+	for _, src := range config.CuratedSources() {
+		cand, err := candidateFromURL(src.URL, src.Type)
+		if err != nil {
+			rejected = append(rejected, RejectedSrc{URL: src.URL, Reason: err.Error()})
+			continue
+		}
+		if exists, _ := store.DocumentExistsByURLHash(c, a.ctx.DB, cand.URLHash); exists {
+			continue
+		}
+		parsed, err := url.Parse(cand.CanonicalURL)
+		if err != nil {
+			rejected = append(rejected, RejectedSrc{URL: src.URL, Reason: err.Error()})
+			continue
+		}
+		decision, err := gate.Check(c, parsed)
+		if err != nil || !decision.Allowed {
+			reason := "compliance gate: not allowed"
+			if err != nil {
+				reason = err.Error()
+			} else if decision.Reason != "" {
+				reason = decision.Reason
+			}
+			rejected = append(rejected, RejectedSrc{URL: src.URL, Reason: reason})
+			continue
+		}
+		stored, err := pipeline.Run(c, cand)
+		if err != nil {
+			rejected = append(rejected, RejectedSrc{URL: src.URL, Reason: err.Error()})
+			issues.Add("document_operator", IssueFetchPartial, "curated ingest failed for "+src.URL, err.Error())
+			continue
+		}
+		if stored {
+			ingested++
+		}
+	}
+	return ingested, rejected
+}
+
+// candidateFromURL builds an ingest candidate from a raw URL (for curated seeds).
+func candidateFromURL(rawURL, contentType string) (discovery.Candidate, error) {
+	canon, err := discovery.Canonical(rawURL)
+	if err != nil {
+		return discovery.Candidate{}, err
+	}
+	u, err := url.Parse(canon)
+	if err != nil {
+		return discovery.Candidate{}, err
+	}
+	return discovery.Candidate{
+		URL:              rawURL,
+		CanonicalURL:     canon,
+		URLHash:          discovery.URLHash(canon),
+		Domain:           strings.TrimPrefix(u.Hostname(), "www."),
+		DiscoveredVia:    "curated",
+		ContentTypeGuess: contentType,
+	}, nil
 }
 
 // docType maps the content_type enum to the agent schema's document_type.

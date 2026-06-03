@@ -42,11 +42,11 @@ func (a *Agent) Analyse(ctx context.Context, doc store.DocRecord) (int, error) {
 	}
 	log.Info("loaded chunks", "count", len(chunks))
 
-	// Step 1: Triage
-	sample := excerpts
-	if len(sample) > 5 {
-		sample = sample[:5]
-	}
+	// Step 1: Triage. Sample chunks spread across the whole document rather
+	// than just the first few — for long reports the opening pages are cover,
+	// table of contents, and foreword, which made genuine opportunities get
+	// rejected as "too vague".
+	sample := spreadSample(excerpts, 8)
 	triage, err := a.llm.Triage(ctx, fmt.Sprintf("url=%s title=%s", doc.CanonicalURL, doc.Title), sample)
 	if err != nil {
 		return 0, fmt.Errorf("triage: %w", err)
@@ -255,6 +255,20 @@ func (a *Agent) Analyse(ctx context.Context, doc store.DocRecord) (int, error) {
 }
 
 // filterKept returns only ideas with keep=true from the critique step.
+// spreadSample picks up to k excerpts evenly spread across the slice, so triage
+// sees the whole document instead of only its opening pages.
+func spreadSample(excerpts []string, k int) []string {
+	if len(excerpts) <= k {
+		return excerpts
+	}
+	out := make([]string, 0, k)
+	step := float64(len(excerpts)) / float64(k)
+	for i := 0; i < k; i++ {
+		out = append(out, excerpts[int(float64(i)*step)])
+	}
+	return out
+}
+
 func filterKept(ideas []llm.CandidateIdea, critiques []llm.CritiqueResult) []llm.CandidateIdea {
 	keepSet := make(map[int]bool)
 	for _, c := range critiques {

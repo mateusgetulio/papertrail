@@ -25,7 +25,8 @@ import (
 
 // Options controls a pipeline run.
 type Options struct {
-	Ingest  bool // Agent 1 runs live discovery + ingest before inventorying
+	Ingest  bool // Agent 1 runs live search discovery + ingest before inventorying
+	Seed    bool // Agent 1 ingests the manually-approved curated source list
 	Analyse bool // Agent 2 runs the LLM analysis over freshly-extracted docs
 	Limit   int  // per-stage cap (documents / candidates)
 }
@@ -52,7 +53,7 @@ func Run(ctx context.Context, db *pgxpool.Pool, cfg *config.Config, log *slog.Lo
 	var all []agents.AgentIssue
 
 	// Stage 1 — Document Operator
-	res.Operator = agents.NewOperator(actx, opts.Ingest, opts.Limit).Run(ctx)
+	res.Operator = agents.NewOperator(actx, opts.Ingest, opts.Seed, opts.Limit).Run(ctx)
 	writeJSON(log, dir, "01-document-operator.json", res.Operator)
 	all = append(all, res.Operator.IssuesReported...)
 	if gate := agents.Decide(runID, all); gate.Decision == agents.DecisionStopForFix {

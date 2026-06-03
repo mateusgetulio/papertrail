@@ -51,10 +51,17 @@ func (pr *PolicyRegistry) Policy(domain string) SourcePolicy {
 }
 
 func (pr *PolicyRegistry) seed() {
-	// Tier A — Multilateral / Gov / Open-license
+	// Tier A — Multilateral / Gov / Open-license.
+	// NOTE: listing a domain here is a ToS-level judgment that it permits
+	// automated access; per-path robots.txt is still enforced separately by the
+	// gate, so disallowed paths on these domains remain blocked.
 	for _, d := range []string{
 		"weforum.org", "oecd.org", "worldbank.org", "imf.org",
 		"un.org", "europa.eu", "data.gov",
+		// IGO / central-bank / national-statistics open research
+		"bis.org", "ecb.europa.eu", "federalreserve.gov", "bls.gov",
+		"census.gov", "gov.uk", "nber.org", "jrc.ec.europa.eu",
+		"iea.org", "wto.org", "ilo.org", "who.int",
 	} {
 		pr.policies[d] = SourcePolicy{AllowsAutomatedAccess: true, AllowsExcerptStorage: true, TrustTier: "A"}
 	}

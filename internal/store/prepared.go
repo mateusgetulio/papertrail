@@ -24,6 +24,15 @@ type PreparedDocument struct {
 	ChunkCount   int
 }
 
+// DocumentExistsByURLHash reports whether a document with this canonical-URL
+// hash is already stored, so the operator can skip re-fetching and re-analysing
+// URLs it has already ingested.
+func DocumentExistsByURLHash(ctx context.Context, db *pgxpool.Pool, urlHash []byte) (bool, error) {
+	var exists bool
+	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM document WHERE url_hash = $1)`, urlHash).Scan(&exists)
+	return exists, err
+}
+
 // GetPreparedDocuments returns documents that reached at least the 'extracted'
 // state (i.e. have usable text), newest first. Pass limit <= 0 for all.
 func GetPreparedDocuments(ctx context.Context, db *pgxpool.Pool, limit int) ([]PreparedDocument, error) {
