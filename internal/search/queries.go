@@ -4,7 +4,7 @@ import "fmt"
 
 // QueryTemplate expands to a list of search queries from dimensions defined in docs/02 §4.
 type QueryTemplate struct {
-	Pattern    string   // printf pattern with %s placeholders
+	Pattern    string // printf pattern with %s placeholders
 	Dimensions [][]string
 }
 

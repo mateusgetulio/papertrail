@@ -6,11 +6,11 @@ import (
 )
 
 type Config struct {
-	DatabaseURL  string
-	OpenAIKey    string
-	OpenAIModel  string
-	BraveAPIKey  string
-	LogLevel     string
+	DatabaseURL string
+	OpenAIKey   string
+	OpenAIModel string
+	BraveAPIKey string
+	LogLevel    string
 }
 
 func Load() (*Config, error) {

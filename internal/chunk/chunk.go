@@ -3,8 +3,8 @@ package chunk
 import "strings"
 
 const (
-	DefaultMaxChars = 4800  // ~1200 tokens at 4 chars/token
-	DefaultOverlap  = 720   // ~15% overlap
+	DefaultMaxChars = 4800 // ~1200 tokens at 4 chars/token
+	DefaultOverlap  = 720  // ~15% overlap
 )
 
 // Chunk splits text into overlapping segments suitable for LLM context windows.

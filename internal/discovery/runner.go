@@ -12,15 +12,15 @@ import (
 
 // Candidate is a vetted, deduplicated URL ready for ingestion gating.
 type Candidate struct {
-	URL          string
-	CanonicalURL string
-	URLHash      []byte
-	Title        string
-	Description  string
-	Domain       string
-	DiscoveredVia string // provider:query
+	URL              string
+	CanonicalURL     string
+	URLHash          []byte
+	Title            string
+	Description      string
+	Domain           string
+	DiscoveredVia    string // provider:query
 	ContentTypeGuess string // "pdf" or "html"
-	GateDecision compliance.Decision
+	GateDecision     compliance.Decision
 }
 
 // Runner orchestrates search → dedup → compliance gate for a set of queries.

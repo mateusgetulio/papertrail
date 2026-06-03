@@ -4,9 +4,9 @@ import "context"
 
 // Result is a single search hit from any provider.
 type Result struct {
-	URL         string
-	Title       string
-	Description string
+	URL          string
+	Title        string
+	Description  string
 	SourceDomain string
 }
 

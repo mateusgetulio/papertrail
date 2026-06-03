@@ -7,10 +7,10 @@ import (
 
 // Decision is the result of the allowed-fetch gate (docs/03 §2).
 type Decision struct {
-	Allowed   bool
-	Reason    string
-	RobotsOK  bool
-	Gated     bool
+	Allowed  bool
+	Reason   string
+	RobotsOK bool
+	Gated    bool
 }
 
 // Gate checks whether a URL is safe to fetch under compliance rules.

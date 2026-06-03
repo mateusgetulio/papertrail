@@ -3,30 +3,30 @@ package llm
 // CandidateIdea is the structured output contract (docs/08).
 // All integer sub-scores are 1–10; OverallScore is 1–100 (computed by scoring.Compute, not the model).
 type CandidateIdea struct {
-	IdeaName            string     `json:"idea_name"`
-	OneSentencePitch    string     `json:"one_sentence_pitch"`
-	SourceDocuments     []string   `json:"source_documents"`
-	Industries          []string   `json:"industries"`
-	CountriesOrRegions  []string   `json:"countries_or_regions"`
-	DisruptionDriver    string     `json:"disruption_driver"`
-	PainPoint           string     `json:"pain_point"`
-	TargetCustomer      string     `json:"target_customer"`
-	BuyerPersona        string     `json:"buyer_persona"`
-	SalesMotion         string     `json:"sales_motion"`
-	HighTicketPotential int        `json:"high_ticket_potential"`
-	MassMarketPotential int        `json:"mass_market_potential"`
-	TechnicalFeasibility int       `json:"technical_feasibility"`
-	MarketUrgency       int        `json:"market_urgency"`
-	CompetitionRisk     int        `json:"competition_risk"`
-	DataAvailability    int        `json:"data_availability"`
-	MVPComplexity       int        `json:"mvp_complexity"`
-	OverallScore        int        `json:"overall_score"`
-	WhyItMightWork      string     `json:"why_it_might_work"`
-	WhyItMightFail      string     `json:"why_it_might_fail"`
-	PossibleMVP         string     `json:"possible_mvp"`
-	First10Customers    string     `json:"first_10_customers"`
-	ValidationQuestions []string   `json:"validation_questions"`
-	Citations           []Citation `json:"citations"`
+	IdeaName             string     `json:"idea_name"`
+	OneSentencePitch     string     `json:"one_sentence_pitch"`
+	SourceDocuments      []string   `json:"source_documents"`
+	Industries           []string   `json:"industries"`
+	CountriesOrRegions   []string   `json:"countries_or_regions"`
+	DisruptionDriver     string     `json:"disruption_driver"`
+	PainPoint            string     `json:"pain_point"`
+	TargetCustomer       string     `json:"target_customer"`
+	BuyerPersona         string     `json:"buyer_persona"`
+	SalesMotion          string     `json:"sales_motion"`
+	HighTicketPotential  int        `json:"high_ticket_potential"`
+	MassMarketPotential  int        `json:"mass_market_potential"`
+	TechnicalFeasibility int        `json:"technical_feasibility"`
+	MarketUrgency        int        `json:"market_urgency"`
+	CompetitionRisk      int        `json:"competition_risk"`
+	DataAvailability     int        `json:"data_availability"`
+	MVPComplexity        int        `json:"mvp_complexity"`
+	OverallScore         int        `json:"overall_score"`
+	WhyItMightWork       string     `json:"why_it_might_work"`
+	WhyItMightFail       string     `json:"why_it_might_fail"`
+	PossibleMVP          string     `json:"possible_mvp"`
+	First10Customers     string     `json:"first_10_customers"`
+	ValidationQuestions  []string   `json:"validation_questions"`
+	Citations            []Citation `json:"citations"`
 }
 
 type Citation struct {
@@ -52,8 +52,8 @@ type DisruptionSignal struct {
 
 // TriageResult reports whether a document is worth analysing.
 type TriageResult struct {
-	Relevant bool   `json:"relevant"`
-	Reason   string `json:"reason"`
+	Relevant bool     `json:"relevant"`
+	Reason   string   `json:"reason"`
 	Topics   []string `json:"topics"`
 }
 

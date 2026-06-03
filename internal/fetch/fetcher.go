@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	MaxBodyBytes     = 50 << 20  // 50 MB hard cap
-	MaxHeadBytes     = 10 << 20  // skip files >10 MB
-	userAgent        = "PaperTrailResearchBot/0.1 (+https://internal/contact)"
+	MaxBodyBytes = 50 << 20 // 50 MB hard cap
+	MaxHeadBytes = 10 << 20 // skip files >10 MB
+	userAgent    = "PaperTrailResearchBot/0.1 (+https://internal/contact)"
 )
 
 // Result holds the raw outcome of a fetch attempt.
@@ -26,7 +26,7 @@ type Result struct {
 	ContentHash  []byte // SHA-256 of Body
 	ETag         string
 	LastModified string
-	NotModified  bool   // 304 — cached copy still valid
+	NotModified  bool // 304 — cached copy still valid
 }
 
 // Cache stores ETag/Last-Modified per URL for conditional requests.

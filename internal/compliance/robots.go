@@ -26,14 +26,14 @@ type RobotsCache struct {
 }
 
 type robotsEntry struct {
-	rules     []robotsRule
+	rules      []robotsRule
 	crawlDelay time.Duration
-	fetchedAt time.Time
+	fetchedAt  time.Time
 }
 
 type robotsRule struct {
-	allow    bool
-	pathPfx  string
+	allow   bool
+	pathPfx string
 }
 
 func NewRobotsCache() *RobotsCache {
