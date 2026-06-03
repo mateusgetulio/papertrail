@@ -1,13 +1,13 @@
 # 01 — Technical & Legal Feasibility Report
 
-**Verdict: Feasible and worth building — as a permanently private, compliance-first internal tool.** The hard part is not the engineering; it is staying inside legal/ToS boundaries while still gathering enough signal, and producing *original analysis* rather than copying report content.
+**Verdict: Feasible and worth building — as an open-source, compliance-first tool that each operator self-hosts with their own keys and data.** The source code is public; the ingested content is never redistributed. The hard part is not the engineering; it is staying inside legal/ToS boundaries while still gathering enough signal, and producing *original analysis* rather than copying report content.
 
 ## 1. Executive summary
 
 - **Technically feasible:** Yes. Every stage (search → fetch → extract → LLM analysis → score → review) uses well-understood components. Go is a fine orchestration language; the only ecosystem gaps (PDF parsing, ML) are solved by shelling out to `pdftotext` and calling hosted LLM/embedding APIs.
 - **Legally feasible:** Yes, *if* we restrict ourselves to public, non-gated material; respect `robots.txt` and ToS; rate-limit politely; and store metadata/citations/short excerpts/original summaries instead of full copyrighted text.
 - **Biggest risks:** (a) copyright over-collection, (b) ToS violations on consulting sites, (c) anti-bot/gating that tempts bypass, (d) LLM-generated opportunities that are plausible but ungrounded ("hallucinated signal"). All are manageable with guardrails.
-- **Recommended first version:** a private pipeline that discovers PDFs/HTML via a search API, fetches only allowed public content, extracts text, runs OpenAI analysis to emit scored SaaS-idea JSON with citations, and surfaces results in a human-review dashboard.
+- **Recommended first version:** a self-hosted pipeline that discovers PDFs/HTML via a search API, fetches only allowed public content, extracts text, runs OpenAI analysis to emit scored SaaS-idea JSON with citations, and surfaces results in a human-review dashboard.
 
 ## 2. What is technically possible
 
@@ -64,4 +64,4 @@
 
 ## 7. Recommendation
 
-Build the **private MVP** described in `docs/09-mvp-backlog.md`. Prioritize the compliance gate and citation-grounding from day one — they are cheaper to build in than to retrofit, and they define whether the whole project is safe. Treat the LLM output as *leads for humans to validate*, not as ground truth.
+Build the **MVP** described in `docs/09-mvp-backlog.md`. Prioritize the compliance gate and citation-grounding from day one — they are cheaper to build in than to retrofit, and they define whether the whole project is safe. Treat the LLM output as *leads for humans to validate*, not as ground truth.

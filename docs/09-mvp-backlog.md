@@ -52,11 +52,12 @@ A phased, build-ready backlog for the **private** Paper Trail tool in **Go**. Ea
 - **Exit criteria:** documents produce scored, deduped, cited candidate ideas matching the output contract.
 
 ## Phase 4 — Review dashboard + export
-- **[M] Review queue UI:** ranked list, filters (label/industry/score), idea detail with citations/excerpts + score breakdown.
-- **[S] Reviewer actions:** approve / reject / edit / merge duplicates / request evidence → `review_status`.
-- **[S] CSV export;** **[M] Notion + Airtable export** via their APIs.
-- **[S] Rubric calibration loop:** capture reviewer decisions for weight tuning (`docs/06 §8`).
-- **Exit criteria:** a reviewer can go from queue → approved ideas → exported, and decisions feed calibration.
+Served by `papertrail serve` (Go + html/template + HTMX + Tailwind; routes in `internal/api`).
+- **[M] Review queue UI:** ranked list, filters (label/state/score), idea detail with citations/excerpts + score breakdown. — ✅ **done**
+- **[S] Reviewer actions:** approve / reject / merge duplicates / request evidence (`needs_more_evidence`) → `review_status`. — ✅ **done** · *edit idea fields not yet supported*
+- **[S] CSV export** — ✅ **done**; **[M] Notion + Airtable export** via their APIs — ⬜ not started.
+- **[S] Rubric calibration loop:** capture reviewer decisions for weight tuning (`docs/06 §8`). — ⬜ partial (decisions captured in `review_status`; no tuning loop yet).
+- **Exit criteria:** a reviewer can go from queue → approved ideas → exported. ✅ (calibration feedback loop still pending)
 
 ## Phase 5 — Hardening & scale (post-MVP)
 - Common Crawl backfill provider; add Exa/Tavily semantic discovery; optional SerpAPI.

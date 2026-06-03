@@ -46,8 +46,9 @@ These are non-negotiable and must have **no enabling code path**:
 - Persisting full copyrighted report text beyond transient processing.
 - Republishing report content or producing near-verbatim summaries.
 - Rotating IPs/User-Agents or spoofing identity to evade blocks.
-- Making the tool public-facing or serving proprietary content to third parties.
+- Hosting Paper Trail as a public service that serves ingested/proprietary report content to third parties. (The *source code* is open; the *content* it processes must not be redistributed.)
+- Committing ingested content — source PDFs, extracted text, chunks, embeddings, or DB dumps — to the repository or any public artifact.
 
 ## 4. Residual risk statement
 
-With the mitigations above, the dominant residual risks are **LLM output quality** (T1–T3, managed by grounding + human review) and **ToS/copyright interpretation** (L1–L2, managed by conservative defaults + counsel review). The architecture is intentionally **fail-closed**: when a source's status is uncertain, the system skips it rather than risk a violation. Operating as a permanently private internal tool keeps legal exposure low because nothing is redistributed.
+With the mitigations above, the dominant residual risks are **LLM output quality** (T1–T3, managed by grounding + human review) and **ToS/copyright interpretation** (L1–L2, managed by conservative defaults + counsel review). The architecture is intentionally **fail-closed**: when a source's status is uncertain, the system skips it rather than risk a violation. Keeping ingested content out of the repository — and not hosting a public instance that serves that content — keeps legal exposure low because nothing copyrighted is redistributed, even though the source code itself is open.

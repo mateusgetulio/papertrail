@@ -55,31 +55,6 @@ func Compute(s llm.SubScores) int {
 	return score
 }
 
-// Components returns the per-criterion breakdown for explainability,
-// stored as a map in ranking_score.components.
-func Components(s llm.SubScores) map[string]any {
-	names := [14]string{
-		"problem_frequency", "urgency", "willingness_to_pay", "budget_owner_clarity",
-		"regulatory_pressure", "competition", "market_size", "impl_complexity",
-		"data_availability", "defensibility", "sales_motion_clarity",
-		"high_ticket_potential", "time_to_mvp", "founder_fit",
-	}
-	breakdown := make(map[string]any, 16)
-	for i, raw := range s.Criteria {
-		adj := float64(clampScore(raw))
-		if inverted[i] {
-			adj = 11.0 - adj
-		}
-		breakdown[names[i]] = map[string]any{
-			"raw": raw, "adj": adj, "weight": weights[i], "contribution": weights[i] * adj,
-		}
-	}
-	breakdown["generic_risk"] = s.GenericRisk
-	breakdown["consulting_risk"] = s.ConsultingRisk
-	breakdown["overall_score"] = Compute(s)
-	return breakdown
-}
-
 func clampScore(v int) int { return clampInt(v, 1, 10) }
 func clampInt(v, lo, hi int) int {
 	if v < lo {
