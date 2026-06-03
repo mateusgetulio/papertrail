@@ -71,6 +71,13 @@ go run ./cmd/papertrail serve                # review dashboard (Phase 4)
 
 You bring your own API keys; none are shipped with the project.
 
+### Production note
+
+The dashboard loads Tailwind via the Play CDN so the binary needs no asset
+build step — ideal for local and self-hosted use. For a shared deployment,
+compile a static stylesheet (Tailwind CLI) and embed it instead, to remove the
+runtime CDN dependency and its console warning. Tracked as a hardening item.
+
 ## Contributing
 
 Contributions are welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the

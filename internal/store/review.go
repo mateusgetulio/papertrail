@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -13,26 +15,39 @@ import (
 // ReviewStates is the ordered set of valid review_state enum values.
 var ReviewStates = []string{"pending", "approved", "rejected", "needs_more_evidence", "merged"}
 
+// SortOptions maps the queue sort keys to human labels (and bounds the
+// whitelist used to build ORDER BY — never interpolate user input directly).
+var SortOptions = []struct{ Key, Label string }{
+	{"score", "Highest score"},
+	{"recent", "Newest"},
+	{"name", "Name (A–Z)"},
+}
+
 // IdeaFilter narrows the review queue. Zero values mean "no constraint".
 type IdeaFilter struct {
 	Label    string // idea_label value, or "" for any
 	State    string // review_state value, or "" for any
 	MinScore int    // 0 = no minimum
 	MaxScore int    // 0 = no maximum
+	Query    string // free-text search over name/pitch/pain point/industries
+	Sort     string // one of SortOptions keys; defaults to "score"
+	Limit    int    // <= 0 means no LIMIT (used by CSV export)
+	Offset   int
 }
 
 // IdeaRow is a row in the review queue / CSV export.
 type IdeaRow struct {
-	ID           int64
-	IdeaName     string
-	Pitch        string
-	Label        string
-	SalesMotion  string
-	Industries   []string
-	PainPoint    string
-	OverallScore int
-	ReviewState  string
-	CreatedAt    time.Time
+	ID            int64
+	IdeaName      string
+	Pitch         string
+	Label         string
+	SalesMotion   string
+	Industries    []string
+	PainPoint     string
+	OverallScore  int
+	ReviewState   string
+	EvidenceCount int
+	CreatedAt     time.Time
 }
 
 // Evidence is one citation backing an idea.
@@ -66,22 +81,91 @@ type IdeaDetail struct {
 	MergedInto *int64
 }
 
-// ListIdeas returns review-queue rows ordered by overall_score descending.
-func ListIdeas(ctx context.Context, db *pgxpool.Pool, f IdeaFilter) ([]IdeaRow, error) {
-	const q = `
-SELECT i.id, i.idea_name, COALESCE(i.one_sentence_pitch,''),
-       COALESCE(i.label::text,''), COALESCE(i.sales_motion::text,''),
-       i.industries, COALESCE(i.pain_point,''),
-       COALESCE(rs.overall_score,0), COALESCE(rv.state::text,'pending'), i.created_at
+// buildWhere assembles the shared WHERE clause and its positional args for the
+// queue listing and count queries. All user input is bound as parameters.
+func buildWhere(f IdeaFilter) (string, []any) {
+	var conds []string
+	var args []any
+	add := func(tmpl string, val any) {
+		args = append(args, val)
+		conds = append(conds, fmt.Sprintf(tmpl, len(args)))
+	}
+	if f.Label != "" {
+		add("i.label::text = $%d", f.Label)
+	}
+	if f.State != "" {
+		add("COALESCE(rv.state::text,'pending') = $%d", f.State)
+	}
+	if f.MinScore > 0 {
+		add("COALESCE(rs.overall_score,0) >= $%d", f.MinScore)
+	}
+	if f.MaxScore > 0 {
+		add("COALESCE(rs.overall_score,0) <= $%d", f.MaxScore)
+	}
+	if q := strings.TrimSpace(f.Query); q != "" {
+		args = append(args, "%"+q+"%")
+		n := len(args)
+		conds = append(conds, fmt.Sprintf(
+			"(i.idea_name ILIKE $%d OR i.one_sentence_pitch ILIKE $%d OR COALESCE(i.pain_point,'') ILIKE $%d OR array_to_string(i.industries,' ') ILIKE $%d)",
+			n, n, n, n))
+	}
+	if len(conds) == 0 {
+		return "", args
+	}
+	return "WHERE " + strings.Join(conds, " AND "), args
+}
+
+// orderClause maps a sort key to a safe ORDER BY (whitelist only).
+func orderClause(sort string) string {
+	switch sort {
+	case "recent":
+		return "ORDER BY i.created_at DESC"
+	case "name":
+		return "ORDER BY i.idea_name ASC"
+	default: // "score"
+		return "ORDER BY rs.overall_score DESC NULLS LAST, i.created_at DESC"
+	}
+}
+
+// CountIdeas returns the total number of ideas matching the filter (ignoring
+// Limit/Offset), for pagination.
+func CountIdeas(ctx context.Context, db *pgxpool.Pool, f IdeaFilter) (int, error) {
+	where, args := buildWhere(f)
+	q := `
+SELECT count(*)
 FROM saas_idea_candidate i
 LEFT JOIN ranking_score rs ON rs.idea_id = i.id
 LEFT JOIN review_status rv ON rv.idea_id = i.id
-WHERE ($1 = '' OR i.label::text = $1)
-  AND ($2 = '' OR COALESCE(rv.state::text,'pending') = $2)
-  AND ($3 = 0 OR COALESCE(rs.overall_score,0) >= $3)
-  AND ($4 = 0 OR COALESCE(rs.overall_score,0) <= $4)
-ORDER BY rs.overall_score DESC NULLS LAST, i.created_at DESC`
-	rows, err := db.Query(ctx, q, f.Label, f.State, f.MinScore, f.MaxScore)
+` + where
+	var n int
+	if err := db.QueryRow(ctx, q, args...).Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+// ListIdeas returns review-queue rows for the given filter, sort, and page.
+func ListIdeas(ctx context.Context, db *pgxpool.Pool, f IdeaFilter) ([]IdeaRow, error) {
+	where, args := buildWhere(f)
+	q := `
+SELECT i.id, i.idea_name, COALESCE(i.one_sentence_pitch,''),
+       COALESCE(i.label::text,''), COALESCE(i.sales_motion::text,''),
+       i.industries, COALESCE(i.pain_point,''),
+       COALESCE(rs.overall_score,0), COALESCE(rv.state::text,'pending'),
+       (SELECT count(*) FROM evidence e WHERE e.idea_id = i.id), i.created_at
+FROM saas_idea_candidate i
+LEFT JOIN ranking_score rs ON rs.idea_id = i.id
+LEFT JOIN review_status rv ON rv.idea_id = i.id
+` + where + "\n" + orderClause(f.Sort)
+
+	if f.Limit > 0 {
+		args = append(args, f.Limit)
+		q += fmt.Sprintf("\nLIMIT $%d", len(args))
+		args = append(args, f.Offset)
+		q += fmt.Sprintf(" OFFSET $%d", len(args))
+	}
+
+	rows, err := db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +174,8 @@ ORDER BY rs.overall_score DESC NULLS LAST, i.created_at DESC`
 	for rows.Next() {
 		var r IdeaRow
 		if err := rows.Scan(&r.ID, &r.IdeaName, &r.Pitch, &r.Label, &r.SalesMotion,
-			&r.Industries, &r.PainPoint, &r.OverallScore, &r.ReviewState, &r.CreatedAt); err != nil {
+			&r.Industries, &r.PainPoint, &r.OverallScore, &r.ReviewState,
+			&r.EvidenceCount, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

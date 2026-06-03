@@ -10,7 +10,7 @@
     <div class="flex gap-2 mt-2">
       <span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span>
       {{if .SalesMotion}}<span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{.SalesMotion}}</span>{{end}}
-      <span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span>
+      <span id="status-badge" class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span>
     </div>
   </div>
 </div>
@@ -19,7 +19,7 @@
   <div class="lg:col-span-2 space-y-6">
     <section class="bg-white border rounded p-4 space-y-3">
       {{if .PainPoint}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Pain point</h3><p>{{.PainPoint}}</p></div>{{end}}
-      {{if .DisruptionDriver}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Disruption driver</h3><p>{{.DisruptionDriver}}</p></div>{{end}}
+      {{if .DisruptionDriver}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Disruption driver</h3><p>{{labelize .DisruptionDriver}}</p></div>{{end}}
       {{if .TargetCustomer}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Target customer</h3><p>{{.TargetCustomer}} {{if .BuyerPersona}}· {{.BuyerPersona}}{{end}}</p></div>{{end}}
       {{if .WhyWork}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Why it might work</h3><p>{{.WhyWork}}</p></div>{{end}}
       {{if .WhyFail}}<div><h3 class="text-xs uppercase tracking-wide text-gray-500">Why it might fail</h3><p>{{.WhyFail}}</p></div>{{end}}

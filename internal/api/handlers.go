@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -24,11 +25,19 @@ var ideaLabels = []string{
 
 var reviewStateOptions = store.ReviewStates
 
+const pageSize = 25
+
 type queueView struct {
-	Ideas  []store.IdeaRow
-	Filter store.IdeaFilter
-	Labels []string
-	States []string
+	Ideas      []store.IdeaRow
+	Filter     store.IdeaFilter
+	Labels     []string
+	States     []string
+	Sorts      []struct{ Key, Label string }
+	Page       int
+	TotalPages int
+	Total      int
+	PrevURL    string
+	NextURL    string
 }
 
 type detailView struct {
@@ -38,19 +47,67 @@ type detailView struct {
 }
 
 func (s *Server) handleQueue(w http.ResponseWriter, r *http.Request) {
-	f := store.IdeaFilter{
-		Label:    r.URL.Query().Get("label"),
-		State:    r.URL.Query().Get("state"),
-		MinScore: atoiDefault(r.URL.Query().Get("min"), 0),
-		MaxScore: atoiDefault(r.URL.Query().Get("max"), 0),
+	q := r.URL.Query()
+	sort := q.Get("sort")
+	if sort == "" {
+		sort = "score"
 	}
+	page := atoiDefault(q.Get("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+
+	f := store.IdeaFilter{
+		Label:    q.Get("label"),
+		State:    q.Get("state"),
+		MinScore: atoiDefault(q.Get("min"), 0),
+		MaxScore: atoiDefault(q.Get("max"), 0),
+		Query:    strings.TrimSpace(q.Get("q")),
+		Sort:     sort,
+		Limit:    pageSize,
+	}
+
+	total, err := store.CountIdeas(r.Context(), s.db, f)
+	if err != nil {
+		s.fail(w, "count ideas", err)
+		return
+	}
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	f.Offset = (page - 1) * pageSize
+
 	ideas, err := store.ListIdeas(r.Context(), s.db, f)
 	if err != nil {
 		s.fail(w, "list ideas", err)
 		return
 	}
-	view := queueView{Ideas: ideas, Filter: f, Labels: ideaLabels, States: reviewStateOptions}
+
+	view := queueView{
+		Ideas: ideas, Filter: f, Labels: ideaLabels, States: reviewStateOptions,
+		Sorts:      store.SortOptions,
+		Page:       page,
+		TotalPages: totalPages,
+		Total:      total,
+		PrevURL:    pageURL(r.URL, page-1, page > 1),
+		NextURL:    pageURL(r.URL, page+1, page < totalPages),
+	}
 	s.render(w, s.queueTmpl, "layout", view)
+}
+
+// pageURL returns a query string for the given page preserving current filters,
+// or "" when the link should be disabled.
+func pageURL(u *url.URL, page int, enabled bool) string {
+	if !enabled {
+		return ""
+	}
+	q := u.Query()
+	q.Set("page", strconv.Itoa(page))
+	return "?" + q.Encode()
 }
 
 func (s *Server) handleDetail(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +172,9 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view := detailView{Idea: idea, Breakdown: scoring.Breakdown(idea.Criteria), States: reviewStateOptions}
-	s.render(w, s.partialTmpl, "reviewpanel", view)
+	// reviewresult = the swapped review panel + an out-of-band update of the
+	// header status badge, so the top of the page stays consistent.
+	s.render(w, s.partialTmpl, "reviewresult", view)
 }
 
 func (s *Server) handleExportCSV(w http.ResponseWriter, r *http.Request) {
@@ -189,12 +248,31 @@ func formatPct(p float64) string {
 	return strconv.FormatFloat(p, 'f', 0, 64) + "%"
 }
 
-// labelize converts an enum value like "needs_more_evidence" into a readable
-// "Needs more evidence".
+// acronyms are rendered upper/camel-cased instead of title-cased so enum and
+// driver values read naturally ("smb_saas" -> "SMB SaaS", not "Smb Saas").
+var acronyms = map[string]string{
+	"saas": "SaaS", "smb": "SMB", "ai": "AI", "mvp": "MVP", "regtech": "RegTech",
+	"api": "API", "ui": "UI", "ux": "UX", "b2b": "B2B", "b2c": "B2C",
+	"crm": "CRM", "erp": "ERP", "hr": "HR", "it": "IT", "kpi": "KPI",
+	"roi": "ROI", "saa": "SaaS",
+}
+
+// labelize converts an enum/driver value like "needs_more_evidence" or
+// "smb_saas" into readable text, preserving known acronyms.
 func labelize(s string) string {
 	if s == "" {
 		return ""
 	}
-	s = strings.ReplaceAll(s, "_", " ")
-	return strings.ToUpper(s[:1]) + s[1:]
+	words := strings.Fields(strings.ReplaceAll(s, "_", " "))
+	for i, wlc := 0, ""; i < len(words); i++ {
+		wlc = strings.ToLower(words[i])
+		if ac, ok := acronyms[wlc]; ok {
+			words[i] = ac
+		} else if i == 0 {
+			words[i] = strings.ToUpper(words[i][:1]) + words[i][1:]
+		} else {
+			words[i] = wlc
+		}
+	}
+	return strings.Join(words, " ")
 }
