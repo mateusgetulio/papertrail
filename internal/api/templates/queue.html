@@ -51,11 +51,12 @@
         <tr>
           <th class="px-3 py-2 w-8"></th>
           <th class="px-4 py-2 w-16">Score</th>
+          <th class="px-4 py-2" title="Build now / Validate / Explore / Park">Rec</th>
+          <th class="px-4 py-2 text-center" title="Reward ÷ effort — higher = quicker win">QW</th>
           <th class="px-4 py-2">Idea</th>
           <th class="px-4 py-2">Label</th>
           <th class="px-4 py-2">Industries</th>
-          <th class="px-4 py-2">Sales motion</th>
-          <th class="px-4 py-2 text-center" title="Number of evidence citations">Sources</th>
+          <th class="px-4 py-2 text-center" title="Distinct source documents (confidence)">Conf</th>
           <th class="px-4 py-2">State</th>
           <th class="px-4 py-2">Created</th>
         </tr>
@@ -65,19 +66,21 @@
         <tr class="hover:bg-gray-50">
           <td class="px-3 py-2"><input type="checkbox" name="ids" value="{{.ID}}"></td>
           <td class="px-4 py-2 font-semibold">{{.OverallScore}}</td>
+          {{$rec := recommend .OverallScore .MVPComplexity .EvidenceCount}}
+          <td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 whitespace-nowrap {{recColor $rec}}">{{$rec}}</span></td>
+          <td class="px-4 py-2 text-center text-gray-600">{{quickwin .MarketUrgency .HighTicketPotential .MVPComplexity}}</td>
           <td class="px-4 py-2">
             <a href="/ideas/{{.ID}}" class="text-blue-700 hover:underline font-medium">{{.IdeaName}}</a>
             <div class="text-gray-500 text-xs">{{.Pitch}}</div>
           </td>
           <td class="px-4 py-2"><span class="text-xs bg-gray-100 rounded px-2 py-0.5">{{labelize .Label}}</span></td>
           <td class="px-4 py-2 text-gray-600 text-xs">{{join .Industries}}</td>
-          <td class="px-4 py-2 text-gray-600 text-xs">{{.SalesMotion}}</td>
-          <td class="px-4 py-2 text-center text-gray-600">{{.EvidenceCount}}</td>
+          <td class="px-4 py-2 text-center text-gray-500 text-xs" title="{{.EvidenceCount}} distinct source(s)">{{confidence .EvidenceCount}}</td>
           <td class="px-4 py-2"><span class="text-xs rounded px-2 py-0.5 {{stateColor .ReviewState}}">{{labelize .ReviewState}}</span></td>
           <td class="px-4 py-2 text-gray-500 text-xs">{{.CreatedAt.Format "2006-01-02"}}</td>
         </tr>
         {{else}}
-        <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">No ideas match these filters.</td></tr>
+        <tr><td colspan="10" class="px-4 py-8 text-center text-gray-400">No ideas match these filters.</td></tr>
         {{end}}
       </tbody>
     </table>

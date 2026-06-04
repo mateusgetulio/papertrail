@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mateusgetulio/papertrail/internal/scoring"
 	"github.com/mateusgetulio/papertrail/internal/store"
 )
 
@@ -165,41 +166,45 @@ func renderMarkdown(d []*store.IdeaDetail, es execSummaryData) string {
 	b.WriteString(summaryLine("Most evidence-backed idea", es.MostEvidenceBacked))
 	b.WriteString("\n")
 
-	b.WriteString("## Ranked Opportunities\n\n")
+	// Decision matrix — scannable comparison of the top candidates so a human
+	// can triage without reading every detail block.
+	b.WriteString("## Decision Matrix (top 25)\n\n")
+	b.WriteString("Rec = Build now / Validate / Explore / Park · QW = reward÷effort · Conf = distinct sources\n\n")
+	b.WriteString("| # | Idea | Score | Rec | QW | Quadrant | Urgency | MVP cx | Comp | Conf |\n")
+	b.WriteString("|---|------|------:|-----|---:|----------|--------:|-------:|-----:|------|\n")
 	for i, x := range d {
-		fmt.Fprintf(&b, "### %d. %s  ·  score %d/100\n\n", i+1, x.IdeaName, x.OverallScore)
-		field(&b, "Disruption", humanize(x.DisruptionDriver))
-		field(&b, "SaaS idea", x.Pitch)
-		field(&b, "Target audience", x.TargetCustomer)
-		field(&b, "Buyer persona", x.BuyerPersona)
-		field(&b, "Market reach", strings.Join(append(append([]string{}, x.Industries...), x.Countries...), ", "))
-		field(&b, "High-ticket vs mass-market", fmt.Sprintf("high-ticket %d/10 · mass-market %d/10", x.HighTicketPotential, x.MassMarketPotential))
-		field(&b, "Why now", fmt.Sprintf("%s (market urgency %d/10)", humanize(x.DisruptionDriver), x.MarketUrgency))
-		field(&b, "MVP version", x.PossibleMVP)
-		field(&b, "Implementation difficulty", fmt.Sprintf("complexity %d/10 · technical feasibility %d/10", x.MVPComplexity, x.TechnicalFeasibility))
-		field(&b, "Estimated build cost", costRange(x.MVPComplexity))
-		field(&b, "Data / integration needs", fmt.Sprintf("data availability %d/10", x.DataAvailability))
-		if len(x.ValidationQuestions) > 0 {
-			b.WriteString("- **Public validation tests:**\n")
-			for _, q := range x.ValidationQuestions {
-				fmt.Fprintf(&b, "  - %s\n", q)
-			}
+		if i >= 25 {
+			break
 		}
-		field(&b, "First 10 customer channels", x.First10)
-		field(&b, "Risks / why it might fail", fmt.Sprintf("%s (competition risk %d/10)", x.WhyFail, x.CompetitionRisk))
-		cs := citations(x)
-		if len(cs) == 0 {
-			b.WriteString("- **Evidence:** ⚠️ no citations recorded — treat as a weak/unverified lead.\n")
-		} else {
-			b.WriteString("- **Evidence and citations:**\n")
-			for _, e := range x.Evidence {
-				if strings.TrimSpace(e.SourceURL) == "" {
-					continue
-				}
-				fmt.Fprintf(&b, "  - %s\n", e.SourceURL)
-			}
+		src := len(citations(x))
+		fmt.Fprintf(&b, "| %d | %s | %d | %s | %.1f | %s | %d | %d | %d | %s |\n",
+			i+1, x.IdeaName, x.OverallScore,
+			scoring.Recommendation(x.OverallScore, x.MVPComplexity, src),
+			scoring.QuickWinScore(x.MarketUrgency, x.HighTicketPotential, x.MVPComplexity),
+			scoring.Quadrant(x.OverallScore, x.MVPComplexity),
+			x.MarketUrgency, x.MVPComplexity, x.CompetitionRisk, scoring.Confidence(src))
+	}
+	b.WriteString("\n")
+
+	// Ranked opportunities, grouped by theme (primary industry) so related
+	// ideas sit together. Groups appear in best-score-first order.
+	b.WriteString("## Ranked Opportunities (by theme)\n\n")
+	groups := map[string][]*store.IdeaDetail{}
+	var order []string
+	for _, x := range d {
+		t := theme(x)
+		if _, ok := groups[t]; !ok {
+			order = append(order, t)
 		}
-		b.WriteString("\n")
+		groups[t] = append(groups[t], x)
+	}
+	n := 0
+	for _, t := range order {
+		fmt.Fprintf(&b, "### Theme: %s (%d)\n\n", t, len(groups[t]))
+		for _, x := range groups[t] {
+			n++
+			renderIdea(&b, n, x)
+		}
 	}
 
 	b.WriteString("## Recommended Next Actions\n\n")
@@ -221,6 +226,86 @@ func summaryLine(label string, d *store.IdeaDetail) string {
 		return fmt.Sprintf("- **%s:** —\n", label)
 	}
 	return fmt.Sprintf("- **%s:** %s (score %d/100)\n", label, d.IdeaName, d.OverallScore)
+}
+
+// theme returns a normalized primary-industry bucket for grouping. The LLM
+// writes industry strings inconsistently ("Finance", "financial_services",
+// "Fintech", "banking"…), so we collapse common synonym families; otherwise the
+// grouping fragments into dozens of near-duplicate headings. Heuristic by design.
+func theme(d *store.IdeaDetail) string {
+	if len(d.Industries) == 0 {
+		return "Other"
+	}
+	raw := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(d.Industries[0], "_", " ")))
+	switch {
+	case raw == "":
+		return "Other"
+	case strings.Contains(raw, "financ") || raw == "banking" || raw == "fintech" ||
+		strings.Contains(raw, "crypto") || strings.Contains(raw, "payment") || strings.Contains(raw, "capital market"):
+		return "Finance / Fintech"
+	case strings.Contains(raw, "health") || strings.Contains(raw, "medical") || raw == "radiology" || raw == "pharma":
+		return "Healthcare"
+	case strings.Contains(raw, "gov") || strings.Contains(raw, "public sector") || strings.Contains(raw, "public administration"):
+		return "Government / Public sector"
+	case strings.Contains(raw, "logistic") || strings.Contains(raw, "supply chain") || strings.Contains(raw, "transport") || raw == "shipping" || raw == "trade":
+		return "Logistics / Supply chain / Trade"
+	case strings.Contains(raw, "agri") || raw == "farming":
+		return "Agriculture"
+	case strings.Contains(raw, "energy") || raw == "utilities" || strings.Contains(raw, "mining") || raw == "water":
+		return "Energy / Resources"
+	case strings.Contains(raw, "educat") || raw == "edtech":
+		return "Education"
+	case strings.Contains(raw, "telecom") || raw == "ict" || strings.Contains(raw, "information technology") || strings.Contains(raw, "technology"):
+		return "Telecom / ICT"
+	case strings.Contains(raw, "insurance"):
+		return "Insurance"
+	case strings.Contains(raw, "real estate") || strings.Contains(raw, "land") || strings.Contains(raw, "property") || strings.Contains(raw, "construction"):
+		return "Real estate / Construction"
+	default:
+		return humanize(raw)
+	}
+}
+
+// renderIdea writes one opportunity's detail block, led by its recommendation.
+func renderIdea(b *strings.Builder, n int, x *store.IdeaDetail) {
+	src := len(citations(x))
+	rec := scoring.Recommendation(x.OverallScore, x.MVPComplexity, src)
+	fmt.Fprintf(b, "#### %d. %s  ·  score %d/100  ·  **%s**\n\n", n, x.IdeaName, x.OverallScore, rec)
+	field(b, "Recommendation", fmt.Sprintf("%s · %s · quick-win %.1f · confidence %s",
+		rec, scoring.Quadrant(x.OverallScore, x.MVPComplexity),
+		scoring.QuickWinScore(x.MarketUrgency, x.HighTicketPotential, x.MVPComplexity),
+		scoring.Confidence(src)))
+	field(b, "Disruption", humanize(x.DisruptionDriver))
+	field(b, "SaaS idea", x.Pitch)
+	field(b, "Target audience", x.TargetCustomer)
+	field(b, "Buyer persona", x.BuyerPersona)
+	field(b, "Market reach", strings.Join(append(append([]string{}, x.Industries...), x.Countries...), ", "))
+	field(b, "High-ticket vs mass-market", fmt.Sprintf("high-ticket %d/10 · mass-market %d/10", x.HighTicketPotential, x.MassMarketPotential))
+	field(b, "Why now", fmt.Sprintf("%s (market urgency %d/10)", humanize(x.DisruptionDriver), x.MarketUrgency))
+	field(b, "MVP version", x.PossibleMVP)
+	field(b, "Implementation difficulty", fmt.Sprintf("complexity %d/10 · technical feasibility %d/10", x.MVPComplexity, x.TechnicalFeasibility))
+	field(b, "Estimated build cost", costRange(x.MVPComplexity))
+	field(b, "Data / integration needs", fmt.Sprintf("data availability %d/10", x.DataAvailability))
+	if len(x.ValidationQuestions) > 0 {
+		b.WriteString("- **Public validation tests:**\n")
+		for _, q := range x.ValidationQuestions {
+			fmt.Fprintf(b, "  - %s\n", q)
+		}
+	}
+	field(b, "First 10 customer channels", x.First10)
+	field(b, "Risks / why it might fail", fmt.Sprintf("%s (competition risk %d/10)", x.WhyFail, x.CompetitionRisk))
+	if src == 0 {
+		b.WriteString("- **Evidence:** ⚠️ no citations recorded — treat as a weak/unverified lead.\n")
+	} else {
+		b.WriteString("- **Evidence and citations:**\n")
+		for _, e := range x.Evidence {
+			if strings.TrimSpace(e.SourceURL) == "" {
+				continue
+			}
+			fmt.Fprintf(b, "  - %s\n", e.SourceURL)
+		}
+	}
+	b.WriteString("\n")
 }
 
 func field(b *strings.Builder, label, value string) {

@@ -8,10 +8,12 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mateusgetulio/papertrail/internal/scoring"
 )
 
 //go:embed templates/*.html
@@ -128,5 +130,25 @@ var funcMap = template.FuncMap{
 			return 0
 		}
 		return *p
+	},
+	// Decision-support helpers (deterministic; see internal/scoring/decision.go).
+	"recommend":  scoring.Recommendation,
+	"quadrant":   scoring.Quadrant,
+	"confidence": scoring.Confidence,
+	"quickwin": func(urgency, highTicket, mvp int) string {
+		return strconv.FormatFloat(scoring.QuickWinScore(urgency, highTicket, mvp), 'f', 1, 64)
+	},
+	// recColor returns Tailwind classes for a recommendation-tier badge.
+	"recColor": func(rec string) string {
+		switch rec {
+		case "Build now":
+			return "bg-green-100 text-green-800"
+		case "Validate":
+			return "bg-blue-100 text-blue-800"
+		case "Explore":
+			return "bg-amber-100 text-amber-800"
+		default: // Park
+			return "bg-gray-100 text-gray-500"
+		}
 	},
 }

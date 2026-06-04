@@ -19,6 +19,7 @@ var ReviewStates = []string{"pending", "approved", "rejected", "needs_more_evide
 // whitelist used to build ORDER BY — never interpolate user input directly).
 var SortOptions = []struct{ Key, Label string }{
 	{"score", "Highest score"},
+	{"quickwin", "Quick win (reward/effort)"},
 	{"recent", "Newest"},
 	{"name", "Name (A–Z)"},
 }
@@ -46,8 +47,18 @@ type IdeaRow struct {
 	PainPoint     string
 	OverallScore  int
 	ReviewState   string
-	EvidenceCount int
+	EvidenceCount int // distinct source documents backing the idea
 	CreatedAt     time.Time
+
+	// Per-axis LLM sub-scores stored as columns (1..10). Used for the
+	// recommendation tier, quick-win ranking, and quadrant.
+	HighTicketPotential  int
+	MassMarketPotential  int
+	TechnicalFeasibility int
+	MarketUrgency        int
+	CompetitionRisk      int
+	DataAvailability     int
+	MVPComplexity        int
 }
 
 // Evidence is one citation backing an idea.
@@ -74,16 +85,6 @@ type IdeaDetail struct {
 	GenericRisk    int
 	ConsultingRisk int
 	TrustWeight    float64
-
-	// Per-axis LLM sub-scores stored as columns (1..10), used by the report
-	// generator's executive-summary heuristics.
-	HighTicketPotential  int
-	MassMarketPotential  int
-	TechnicalFeasibility int
-	MarketUrgency        int
-	CompetitionRisk      int
-	DataAvailability     int
-	MVPComplexity        int
 
 	Evidence   []Evidence
 	Reviewer   string
@@ -156,6 +157,8 @@ func orderClause(sort string) string {
 		return "ORDER BY i.created_at DESC"
 	case "name":
 		return "ORDER BY i.idea_name ASC"
+	case "quickwin":
+		return "ORDER BY (COALESCE(i.market_urgency,0)+COALESCE(i.high_ticket_potential,0))::float / GREATEST(COALESCE(i.mvp_complexity,1),1) DESC, rs.overall_score DESC NULLS LAST"
 	default: // "score"
 		return "ORDER BY rs.overall_score DESC NULLS LAST, i.created_at DESC"
 	}
@@ -186,7 +189,10 @@ SELECT i.id, i.idea_name, COALESCE(i.one_sentence_pitch,''),
        COALESCE(i.label::text,''), COALESCE(i.sales_motion::text,''),
        i.industries, COALESCE(i.pain_point,''),
        COALESCE(rs.overall_score,0), COALESCE(rv.state::text,'pending'),
-       (SELECT count(*) FROM evidence e WHERE e.idea_id = i.id), i.created_at
+       (SELECT count(DISTINCT source_url) FROM evidence e WHERE e.idea_id = i.id), i.created_at,
+       COALESCE(i.high_ticket_potential,0), COALESCE(i.mass_market_potential,0),
+       COALESCE(i.technical_feasibility,0), COALESCE(i.market_urgency,0),
+       COALESCE(i.competition_risk,0), COALESCE(i.data_availability,0), COALESCE(i.mvp_complexity,0)
 FROM saas_idea_candidate i
 LEFT JOIN ranking_score rs ON rs.idea_id = i.id
 LEFT JOIN review_status rv ON rv.idea_id = i.id
@@ -209,7 +215,9 @@ LEFT JOIN review_status rv ON rv.idea_id = i.id
 		var r IdeaRow
 		if err := rows.Scan(&r.ID, &r.IdeaName, &r.Pitch, &r.Label, &r.SalesMotion,
 			&r.Industries, &r.PainPoint, &r.OverallScore, &r.ReviewState,
-			&r.EvidenceCount, &r.CreatedAt); err != nil {
+			&r.EvidenceCount, &r.CreatedAt,
+			&r.HighTicketPotential, &r.MassMarketPotential, &r.TechnicalFeasibility,
+			&r.MarketUrgency, &r.CompetitionRisk, &r.DataAvailability, &r.MVPComplexity); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -292,6 +300,14 @@ FROM evidence WHERE idea_id = $1 ORDER BY id`, id)
 	if err := ev.Err(); err != nil {
 		return nil, err
 	}
+	// Distinct source documents → confidence + recommendation tier.
+	srcSeen := map[string]bool{}
+	for _, e := range d.Evidence {
+		if e.SourceURL != "" {
+			srcSeen[e.SourceURL] = true
+		}
+	}
+	d.EvidenceCount = len(srcSeen)
 
 	// Merge relationships: the target this idea was merged into, and any ideas
 	// that were merged into this one.

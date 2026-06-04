@@ -14,21 +14,21 @@ func fixtureDetails() []*store.IdeaDetail {
 		IdeaRow: store.IdeaRow{
 			ID: 1, IdeaName: "Alpha Platform", Pitch: "A vertical SaaS for X.",
 			Label: "vertical_saas", OverallScore: 70, PainPoint: "pain a",
-			Industries: []string{"Healthcare"},
+			Industries:          []string{"Healthcare"},
+			HighTicketPotential: 9, MassMarketPotential: 2, MVPComplexity: 3,
 		},
 		DisruptionDriver: "demand_shift",
 		WhyFail:          "competition", PossibleMVP: "mvp a", First10: "hospitals",
-		HighTicketPotential: 9, MassMarketPotential: 2, MVPComplexity: 3,
 		Evidence: []store.Evidence{{SourceURL: "https://example.org/a"}, {SourceURL: "https://example.org/a"}},
 	}
 	b := &store.IdeaDetail{
 		IdeaRow: store.IdeaRow{
 			ID: 2, IdeaName: "Beta Tool", Pitch: "A mass-market tool.",
 			Label: "mass_market", OverallScore: 40,
+			HighTicketPotential: 3, MassMarketPotential: 8, MVPComplexity: 8,
 		},
-		DisruptionDriver:    "tech_shift",
-		HighTicketPotential: 3, MassMarketPotential: 8, MVPComplexity: 8,
-		Evidence: nil, // no citations
+		DisruptionDriver: "tech_shift",
+		Evidence:         nil, // no citations
 	}
 	return []*store.IdeaDetail{a, b}
 }
