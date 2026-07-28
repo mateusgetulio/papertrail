@@ -19,6 +19,9 @@ import (
 //go:embed templates/*.html
 var templatesFS embed.FS
 
+//go:embed static
+var staticFS embed.FS
+
 // Server holds dependencies for the dashboard HTTP handlers.
 type Server struct {
 	db           *pgxpool.Pool
@@ -72,6 +75,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /ideas/{id}/edit", s.handleEditForm)
 	mux.HandleFunc("POST /ideas/{id}/edit", s.handleEditSave)
 	mux.HandleFunc("GET /export/csv", s.handleExportCSV)
+	mux.Handle("GET /static/", http.FileServerFS(staticFS))
 	return logRequests(mux)
 }
 

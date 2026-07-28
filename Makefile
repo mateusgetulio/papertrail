@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: dev-up dev-down migrate build run test spike lint
+.PHONY: dev-up dev-down migrate build run test spike lint css
 
 dev-up:
 	docker compose up -d db
@@ -42,3 +42,7 @@ test:
 
 lint:
 	golangci-lint run ./...
+
+css:
+	npx -y tailwindcss@3.4.17 -i internal/api/tailwind.css -o internal/api/static/app.css \
+		--content 'internal/api/templates/*.html,internal/api/*.go' --minify
