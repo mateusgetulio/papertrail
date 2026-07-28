@@ -85,7 +85,7 @@ func (f *Fetcher) HeadOK(ctx context.Context, rawURL string) (bool, string) {
 	if err != nil {
 		return true, ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.ContentLength > int64(MaxHeadBytes) {
 		return false, fmt.Sprintf("file too large: %d bytes", resp.ContentLength)
 	}
@@ -138,7 +138,7 @@ func (f *Fetcher) doRequest(ctx context.Context, rawURL string) (*Result, bool, 
 	if err != nil {
 		return nil, true, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotModified {
 		return &Result{URL: rawURL, StatusCode: 304, NotModified: true}, false, nil

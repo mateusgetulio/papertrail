@@ -94,7 +94,7 @@ func DefaultTemplates() []QueryTemplate {
 		// Broad generic — any domain (allowlist still gates results).
 		{
 			Pattern:    `"%s" "white paper" filetype:pdf "%s"`,
-			Dimensions: [][]string{industries, []string{"disruption", "automation", "inefficiency"}},
+			Dimensions: [][]string{industries, {"disruption", "automation", "inefficiency"}},
 		},
 		{
 			Pattern:    `"manual process" OR "data silos" OR "inefficiency" "industry report" filetype:pdf "%s"`,

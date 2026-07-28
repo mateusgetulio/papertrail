@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -91,7 +92,7 @@ func (rc *RobotsCache) fetch(ctx context.Context, base string) (*robotsEntry, er
 	if err != nil {
 		return nil, fmt.Errorf("robots fetch %s: %w", robotsURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
 	entry := parseRobots(string(body))
@@ -124,20 +125,21 @@ func parseRobots(content string) *robotsEntry {
 		if !inScope {
 			continue
 		}
-		if strings.HasPrefix(lower, "disallow:") {
+		switch {
+		case strings.HasPrefix(lower, "disallow:"):
 			path := strings.TrimSpace(line[len("disallow:"):])
 			if path != "" {
 				entry.rules = append(entry.rules, robotsRule{allow: false, pathPfx: path})
 			}
-		} else if strings.HasPrefix(lower, "allow:") {
+		case strings.HasPrefix(lower, "allow:"):
 			path := strings.TrimSpace(line[len("allow:"):])
 			if path != "" {
 				entry.rules = append(entry.rules, robotsRule{allow: true, pathPfx: path})
 			}
-		} else if strings.HasPrefix(lower, "crawl-delay:") {
-			var secs float64
-			fmt.Sscanf(strings.TrimSpace(line[len("crawl-delay:"):]), "%f", &secs)
-			entry.crawlDelay = time.Duration(secs * float64(time.Second))
+		case strings.HasPrefix(lower, "crawl-delay:"):
+			if secs, err := strconv.ParseFloat(strings.TrimSpace(line[len("crawl-delay:"):]), 64); err == nil {
+				entry.crawlDelay = time.Duration(secs * float64(time.Second))
+			}
 		}
 	}
 	return entry

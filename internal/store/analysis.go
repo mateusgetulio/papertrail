@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -238,12 +237,4 @@ func parseVecAny(v any) []float32 {
 		return f
 	}
 	return nil
-}
-
-// parseTimePtr safely converts a time.Time pointer for nullable columns.
-func parseTimePtr(t *time.Time) any {
-	if t == nil {
-		return nil
-	}
-	return *t
 }

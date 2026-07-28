@@ -93,9 +93,9 @@ func WriteTempFile(body []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("temp file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Write(body); err != nil {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 		return "", fmt.Errorf("write temp: %w", err)
 	}
 	return f.Name(), nil

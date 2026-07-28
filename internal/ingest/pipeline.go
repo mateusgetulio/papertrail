@@ -105,7 +105,7 @@ func (p *Pipeline) Run(ctx context.Context, c discovery.Candidate) (bool, error)
 		if err != nil {
 			return false, fmt.Errorf("write temp: %w", err)
 		}
-		defer os.Remove(tmpPath) // compliance: no full-text retention
+		defer func() { _ = os.Remove(tmpPath) }() // compliance: no full-text retention
 
 		meta, err = metadata.FromPDF(ctx, tmpPath)
 		if err != nil {
