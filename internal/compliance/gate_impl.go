@@ -110,7 +110,7 @@ func (g *GateImpl) Check(ctx context.Context, u *url.URL) (Decision, error) {
 	// 3. Content type: only pdf and html
 	path := strings.ToLower(u.Path)
 	if !strings.HasSuffix(path, ".pdf") && !strings.HasSuffix(path, ".html") &&
-		!strings.HasSuffix(path, "/") && !strings.HasSuffix(path, "") {
+		!strings.HasSuffix(path, "/") {
 		// Allow paths without extension (could be HTML)
 		if strings.Contains(path, ".") &&
 			!strings.HasSuffix(path, ".htm") {
